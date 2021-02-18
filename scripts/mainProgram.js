@@ -35,17 +35,16 @@ function setActiveShadingMode(shadingMode)
 
 function loadOBJ(objURL)
 {
-	// DEBUG: OVERRIDE A MESH:
+	// TODO: CLEANUP:
 	//objURL = 'http://www.sfu.ca/~abadke/temp/halfMonster.obj';
-	objURL = 'http://www.sfu.ca/~abadke/temp/pyramid.obj';
+	// objURL = 'http://www.sfu.ca/~abadke/temp/pyramid.obj';
 	//objURL = 'https://gist.githubusercontent.com/MaikKlein/0b6d6bb58772c13593d0a0add6004c1c/raw/48cf9c6d1cdd43cc6862d7d34a68114e2b93d497/cube.obj';
 	// objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/goodhand.obj';
 	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/horse_s.obj';
 	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/venus.obj';
 	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/wheel.obj';
-
 	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/walking_monster.obj';
-	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/horse.obj';
+	objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/horse.obj';
 	
 	loadOBJFromURL(objURL);
 }
@@ -74,16 +73,7 @@ function downloadOBJ()
 	{
 		alert("Cannot download an OBJ when no mesh is loaded. Please load a mesh first.");
 	}	
-}
-
-
-// TODO: 
-// - Add OBJ download functionality
-// - Fix wireframe rendering error logs: Upload a color value
-// 		-> Don't actually need a seperate wireframe shader: Just upload a different color?
-//		-> Don't need a seperate flat shader: Flat shading just uses a different normal buffer
-// - Cleanup: Action "TODO"s
-	
+}	
 
 
 /*	Main program:

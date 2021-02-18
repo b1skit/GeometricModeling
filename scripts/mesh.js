@@ -141,9 +141,9 @@ class mesh
 	_shadingMode 				= SHADING_MODE.SMOOTH;
 
     // Winged-edge structure:
-    _faces      = [];
-    _edges      = [];
-    _vertices   = [];
+    _faces      = null;
+    _edges      = null;
+    _vertices   = null;
 
 
     constructor()
@@ -170,6 +170,25 @@ class mesh
 		return this._vertices[candidateVertex._vertIndex];
 	}
 
+
+	// Inserts an edge (and its inverse) if it has not been seet before. Returns the inserted/existing edge with the same orientation as the received candidate edge:
+	addEdgeIfUnique(candidateEdge)
+	{
+		var originVertIndex = candidateEdge._vertOrigin._vertIndex;
+		var destVertIndex 	= candidateEdge._vertDest._vertIndex;
+
+		// If the edge doesn't exist, add it and its inverse to the edges table:
+		if(this._edges[originVertIndex][destVertIndex] == null)
+		{
+			this._edges[originVertIndex][destVertIndex] = candidateEdge;
+
+			var inverseEdge = new edge(candidateEdge._vertDest, candidateEdge._vertOrigin);
+
+			this._edges[destVertIndex][originVertIndex] = inverseEdge;
+		}
+
+		return this._edges[originVertIndex][destVertIndex];
+	}
 
     // Load data received from an .obj file into our mesh:
     constructMeshFromOBJData(objData)
@@ -339,7 +358,7 @@ class mesh
 
 		if (nonStandardOBJ)
 		{
-			alert("[mesh::constructMeshFromOBJData] Warning: Non-standard .OBJ detected... Results may be unexpected");
+			alert("[mesh::constructMeshFromOBJData] Warning: Non-standard .OBJ detected... Results may be unexpected!");
 		}	   
      
 		// (Re)Initialize our winged-edge structures:
@@ -348,7 +367,17 @@ class mesh
 		{
 			this._vertices.push(null);	// Pre-allocate the vertices array
 		}
+		// 2D edge table:
 		this._edges 	= [];
+		for (var currentRow = 0; currentRow < extractedVerts.length; currentRow++)
+		{
+			this._edges.push(new Array());
+			for (var currentCol = 0; currentCol < extractedVerts.length; currentCol++)
+			{
+				this._edges[currentRow].push(null);
+			}
+		}
+
 		this._faces 	= [];
 
 		// Construct our winged data structure using the extracted face indexes:
@@ -417,6 +446,12 @@ class mesh
 				new edge(newFaceVerts[2], newFaceVerts[0]),
 			];	// NOTE: Edge construction sets the origin vertex -> edge pointer, if it's not already set
 
+			// Update the edges table:
+			for (var currentEdge = 0; currentEdge < 3; currentEdge++)
+			{
+				newFaceEdges[currentEdge] = this.addEdgeIfUnique(newFaceEdges[currentEdge]);
+			}
+
 			// Construct face normal:
 			var v1 = vec3.create();				
 			vec3.subtract(v1, newFaceVerts[0]._position, newFaceVerts[1]._position);
@@ -428,6 +463,7 @@ class mesh
 
 			newFace._faceNormal = vec3.create();
 			vec3.cross(newFace._faceNormal, v2, v1);
+			vec3.normalize(newFace._faceNormal, newFace._faceNormal);
 
 			// If no normals were received, use the face normal
 			if (!hasNormal)
@@ -435,106 +471,45 @@ class mesh
 				newFace._normals.push(newFace._faceNormal);	// We push it 3 times (once for each vertex)
 				newFace._normals.push(newFace._faceNormal);
 				newFace._normals.push(newFace._faceNormal);
-
-				// TODO: ENSURE THERE IS A SANE ORDERING WITH FACE NORMALS FROM OBJS...: NORMALS SHOULD MAP TO VERTICES DEPENDING ON EDGE ORDER?!?!?!!?
 			}
 
-			// Process new face's edges:
-			for (var currentNewEdge = 0; currentNewEdge < newFaceEdges.length; currentNewEdge++)
-			{	
-				// Update the edge pointers for the left face:
-				var nextEdgeIndex	= (currentNewEdge + 1) % 3;	// next/prev w.r.t CCW
-				var prevEdgeIndex	= currentNewEdge == 0 ? 2 : ((currentNewEdge - 1) % 3);
+			// Update the pointers:
+			for (var currentEdge = 0; currentEdge < newFaceEdges.length; currentEdge++)
+			{
+				// NOTE: Edge construction already set the origin vertex -> edge pointers
 
-				newFaceEdges[currentNewEdge]._edgeLeftCCW 	= newFaceEdges[nextEdgeIndex];
-				newFaceEdges[currentNewEdge]._edgeLeftCW 	= newFaceEdges[prevEdgeIndex];
+				var originVertIndex = newFaceEdges[currentEdge]._vertOrigin._vertIndex;
+				var destVertIndex 	= newFaceEdges[currentEdge]._vertDest._vertIndex;
 
-				newFaceEdges[currentNewEdge]._faceLeft 		= newFace;	// Left face is ALWAYS the face that first introduced the edge
+				var inverseEdge 	= this._edges[destVertIndex][originVertIndex];
 
-				// If the current edge's destination vertex points to an edge, and that edge's destination is the current edge's origin, we've found an inverse edge
-				if (newFaceEdges[currentNewEdge]._vertDest._edge._vertDest === newFaceEdges[currentNewEdge]._vertOrigin)
+				// Update pointers for the current face and its edges:
+				newFaceEdges[currentEdge]._faceLeft = newFace;
+				inverseEdge._faceRight 				= newFace;
+
+				if (inverseEdge._faceLeft != null)
 				{
-					// Exchange right-face pointers:
-					newFaceEdges[currentNewEdge]._faceRight 				= newFaceEdges[currentNewEdge]._vertDest._edge._faceLeft;
-					newFaceEdges[currentNewEdge]._vertDest._edge._faceRight = newFaceEdges[currentNewEdge]._faceLeft;
-
-					// Exchange edge pointers:
-					var foundCW 	= false;
-					var foundCCW 	= false;
-					var foundInverse = false;
-					var startRightEdge 		= newFaceEdges[currentNewEdge]._faceRight._edge;
-					var currentRightEdge 	= startRightEdge;
-					do
-					{
-						// Found right CW edge:
-						if(currentRightEdge._vertDest === newFaceEdges[currentNewEdge]._vertDest)
-						{
-							newFaceEdges[currentNewEdge]._edgeRightCW = currentRightEdge;
-							foundCW = true;
-						}
-						// Found right CCW edge
-						if(currentRightEdge._vertOrigin === newFaceEdges[currentNewEdge].vertOrigin)
-						{
-							newFaceEdges[currentNewEdge]._edgeRightCCW = currentRightEdge;
-							foundCCW = true;
-						}
-
-						// Found inverse edge:
-						if (	currentRightEdge._vertOrigin === newFaceEdges[currentNewEdge]._vertDest &&
-								currentRightEdge._vertDest === newFaceEdges[currentNewEdge]._vertOrigin
-							)
-						{
-							currentRightEdge._edgeRightCW 	= newFaceEdges[prevEdgeIndex];
-							currentRightEdge._edgeRightCCW 	= newFaceEdges[nextEdgeIndex];
-							foundInverse = true;
-						}
-
-						// Prepare for the next iteration:
-						currentRightEdge = currentRightEdge._edgeLeftCCW;
-
-					// } while (currentRightEdge != startRightEdge || (!foundCW && !foundCCW && !foundInverse));
-					} while (currentRightEdge != startRightEdge);
-					// ????????????????????????????????????????????^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^????????????????????????????????
-
-				}
-				// else if(newFaceEdges[currentNewEdge]._vertOrigin._edge != newFaceEdges[currentNewEdge])	// If the current origin vertex -> edge pointer doesn't refer to the current edge, check the neighboring faces for an inverse edge
-
-				else if(
-					newFaceEdges[currentNewEdge]._vertOrigin._edge != newFaceEdges[currentNewEdge] ||
-					newFaceEdges[currentNewEdge]._vertDest._edge != newFaceEdges[nextEdgeIndex]
-
-					)	// If the current origin vertex -> edge pointer doesn't refer to the current edge, check the neighboring faces for an inverse edge
-				{
-					// Check the next candidate that COULD hold our destination vertex:
-					if (newFaceEdges[currentNewEdge]._vertOrigin._edge._edgeLeftCCW._vertDest === newFaceEdges[currentNewEdge]._vertDest)
-					{
-						console.log("Found one");
-
-
-
-						// Exchange right-face pointers:
-						newFaceEdges[currentNewEdge]._faceRight 				= newFaceEdges[currentNewEdge]._vertOrigin._edge._edgeLeftCCW._faceLeft;
-						newFaceEdges[currentNewEdge]._vertOrigin._edge._edgeLeftCCW._edgeLeftCCW._faceRight = newFace;
-
-
-						// Edge pointers:
-						newFaceEdges[currentNewEdge]._edgeRightCW = newFaceEdges[currentNewEdge]._vertOrigin._edge._edgeLeftCCW;
-						newFaceEdges[currentNewEdge]._vertOrigin._edge._edgeLeftCCW._edgeLeftCCW._edgeRightCW = newFaceEdges[prevEdgeIndex];
-
-						newFaceEdges[currentNewEdge]._vertOrigin._edge._edgeLeftCCW._edgeLeftCCW._edgeRightCCW = newFaceEdges[nextEdgeIndex];
-
-						newFaceEdges[currentNewEdge]._edgeRightCCW = newFaceEdges[currentNewEdge]._vertOrigin._edge;
-						
-						console.log(newFaceEdges[currentNewEdge]);
-
-
-
-					}
+					newFaceEdges[currentEdge]._faceRight = inverseEdge._faceLeft;
 				}
 
-				this._edges.push(newFaceEdges[currentNewEdge]);
-				
-			} // end edge loop
+				// Update edge pointers:
+				var nextEdgeIndex	= (currentEdge + 1) % 3;	// next/prev w.r.t CCW
+				var prevEdgeIndex	= currentEdge == 0 ? 2 : ((currentEdge - 1) % 3);
+
+				// Current edge: CW, CCW:
+				newFaceEdges[currentEdge]._edgeLeftCCW 	= newFaceEdges[nextEdgeIndex];
+				newFaceEdges[currentEdge]._edgeLeftCW 	= newFaceEdges[prevEdgeIndex];
+
+				// Inverse edge: Right CCW
+				var nextCCWEdgeOriginVertIndex 	= destVertIndex;
+				var nextCCWEdgeDestVertIndex 	= newFaceEdges[currentEdge]._edgeLeftCCW._vertDest._vertIndex;
+				inverseEdge._edgeRightCCW 		= this._edges[nextCCWEdgeOriginVertIndex][nextCCWEdgeDestVertIndex];
+
+				// Inverse edge: Right CW
+				var prevCWEdgeDestVertIndex 	= originVertIndex;
+				var prevCWEdgeOriginVertIndex 	= newFaceEdges[currentEdge]._edgeLeftCW._vertOrigin._vertIndex;
+				inverseEdge._edgeRightCW 		= this._edges[prevCWEdgeDestVertIndex][prevCWEdgeOriginVertIndex];
+			}
 
 			// Now that we have our final edges, update the face -> edge pointer
 			newFace._edge 	= newFaceEdges[0];
@@ -557,16 +532,7 @@ class mesh
 			} while (currentEdge != startEdge);
 		}
 
-		console.log("[mesh::constructMeshFromOBJData] Extracted " + this._vertices.length + " vertices, " + this._edges.length + " (bidirectional) edges, " + this._faces.length + " faces to the winged data structure");
-
-
-
-		
-		console.log(this._edges);
-		console.log(this._vertices);
-		
-
-
+		console.log("[mesh::constructMeshFromOBJData] Extracted " + this._vertices.length + " vertices, " + (this._faces.length * 3) + " (bi-directional) edges, " + this._faces.length + " faces to the winged data structure");
 
         // Finally, initialize the render object mesh's vertex buffers:
         this.initializeBuffers();
@@ -575,66 +541,107 @@ class mesh
 
 	convertMeshToOBJ()
 	{
-		var objText = "# OBJ output: CMPT 764, Adam Badke\n";
+		var objText = "# OBJ output: CMPT 764, Adam Badke\n\n";
 
-		// Arrays of strings:
-		var vertexSection 	= [];
-		var uvSection 		= [];
-		var normalSection 	= [];
-		var faceSection 	= [];
-
-		// Pre-allocate the maximum space we'll need:
-		for (var currentElement = 0; currentElement < this._faces.length * 3; currentElement++)
-		{
-			vertexSection.push("");
-			uvSection.push(""); 	
-			normalSection.push("");
+		// Construct vertex strings:
+		for (var currentVert = 0; currentVert < this._vertices.length; currentVert++)
+		{			
+			objText += "v " + this.formatFloatValueForOBJOutput(this._vertices[currentVert]._position[0]) + " " + this.formatFloatValueForOBJOutput(this._vertices[currentVert]._position[1]) + " " + this.formatFloatValueForOBJOutput(this._vertices[currentVert]._position[2]) + "\n";
 		}
 
+
+		var uvSection 		= "";
+		var normalSection 	= "";
+		var faceSection 	= "";
+
+		var hasUVs = this._faces[0]._uvs.length > 0; 	// Assume if the first face has UV's, they all do...
 		
+		var currentUVIndex 		= 1;	// Start at 1, as OBJ's use 1-based indexing
+		var currentNormalIndex 	= 1;
 
-		// CURRENT PROBLEMS:
-		// _faceRight and _edgeRightCW/CCW is null for many edges
-		// OBJ output is not working properly yet...
-
-
-		// Construct the OBJ strings:
+		// Construct face strings:
 		for (var currentFace = 0; currentFace < this._faces.length; currentFace++)
 		{
-			var currentFaceString = "f ";
-			var startEdge 	= this._faces._edge;
-			var currentEdge = this._faces._edge;
+			// UVs:
+			var currentUVString = "";
+			var currentUVIndexStrings = [];
+			
+			if (this._faces[currentFace]._uvs.length > 0)
+			{
+				for (var currentUV = 0; currentUV < this._faces[currentFace]._uvs.length; currentUV++)
+				{
+					currentUVString += "vt " + this.formatFloatValueForOBJOutput(this._faces[currentFace]._uvs[currentUV][0]) + " " + this.formatFloatValueForOBJOutput(this._faces[currentFace]._uvs[currentUV][1]) + "\n";
+					currentUVIndexStrings.push(currentUVIndex++);
+				}
+			}
+			else if (hasUVs)
+			{
+				console.log("[mesh::convertMeshToOBJ] Error: Some faces are missing uvs" );
+			}
+			
+			// Normals:
+			var currentNormalString = "";
+			for (var currentNormal = 0; currentNormal < this._faces[currentFace]._normals.length; currentNormal++)
+			{
+				currentNormalString += "vn " + this.formatFloatValueForOBJOutput(this._faces[currentFace]._faceNormal[0]) + " " + this.formatFloatValueForOBJOutput(this._faces[currentFace]._faceNormal[1]) + " " + this.formatFloatValueForOBJOutput(this._faces[currentFace]._faceNormal[2]) + "\n";
+			}
+
+			var currentFaceString 	= "f ";			
+			var startEdge 			= this._faces[currentFace]._edge;
+			var currentEdge 		= this._faces[currentFace]._edge;
+			var currentVert = 0;
 			do
 			{
-				if (vertexSection[currentEdge._vertOrigin._vertIndex] == "")
-				{
-					vertexSection[currentEdge._vertOrigin._vertIndex] = "v " + currentEdge._vertOrigin._position[0] + " " + currentEdge._vertOrigin._position[1] + " " + currentEdge._vertOrigin._position[2] + "\n";
-				}
+				// Face string:
+				currentFaceString += (currentEdge._vertOrigin._vertIndex + 1).toString(); // +1, as OBJ's use 1-based indexing
 
-				currentFaceString += currentEdge._vertOrigin._vertIndex + 1; // +1, as OBJ's use 1-based indexing
+				currentFaceString += "/";
+
+				// Append UVs:
+				if (hasUVs)
+				{
+					currentFaceString += currentUVIndexStrings[currentVert];
+				}
+				currentFaceString += "/"
+
+				// Append normals:
+				currentFaceString += currentNormalIndex;
+				currentNormalIndex++;
+
+				// Append separator/new line:
+				if (currentVert == 2)
+				{
+					currentFaceString += "\n";
+				}
+				else
+				{
+					currentFaceString += " ";
+				}
 
 				// Prepare for the next iteration:
 				currentEdge = currentEdge._edgeLeftCCW;
+				currentVert++;
 			} while (currentEdge != startEdge)
 
-			faceSection.push(currentFaceString + "\n");
+			// Append results to output:
+			faceSection += currentFaceString;
+			uvSection += currentUVString;
+			normalSection += currentNormalString;
 		}
 
-		//  Assemble the results:
-		for (var currentVertex = 0; currentVertex < vertexSection.length; currentVertex++)
+		return objText + uvSection + normalSection + faceSection;
+	}
+
+
+	// Helper function: Converts a value to string, and appends ".0" if it's an integer
+	formatFloatValueForOBJOutput(value)
+	{
+		var result = value.toString();
+		if(value % 1 == 0)
 		{
-			if (vertexSection[currentVertex] != "")
-			{
-				objText += vertexSection[currentVertex];
-			}
+			result += ".0";
 		}
-
-		for (var currentFace = 0; currentFace < faceSection.length; currentFace++)
-		{
-			objText += faceSection[currentFace];
-		}
-
-		return objText;
+		return result;
 	}
 
     
