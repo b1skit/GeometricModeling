@@ -190,6 +190,15 @@ class shader
             theVector
         );
     }
+
+	// Upload an integer value:
+	setUnform1i(locationName, theValue)
+	{
+		gl.uniform1i(
+			gl.getUniformLocation(this._shaderProgram, locationName), 
+            theValue
+		);
+	}
 }
 
 

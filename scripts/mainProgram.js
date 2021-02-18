@@ -35,27 +35,28 @@ function setActiveShadingMode(shadingMode)
 
 function loadOBJ(objURL)
 {
-	// TODO: CLEANUP:
-	//objURL = 'http://www.sfu.ca/~abadke/temp/halfMonster.obj';
-	// objURL = 'http://www.sfu.ca/~abadke/temp/pyramid.obj';
+	// DEBUG: Override URLS
 	//objURL = 'https://gist.githubusercontent.com/MaikKlein/0b6d6bb58772c13593d0a0add6004c1c/raw/48cf9c6d1cdd43cc6862d7d34a68114e2b93d497/cube.obj';
-	// objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/goodhand.obj';
 	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/horse_s.obj';
+	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/goodhand.obj';
 	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/venus.obj';
 	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/wheel.obj';
 	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/walking_monster.obj';
-	objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/horse.obj';
+	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/horse.obj';
+
+	// Create a new render object and add it to the scene:
+	theRenderObject = new renderObject();
+	theSceneManager._scene.setRenderObject(theRenderObject);
 	
 	loadOBJFromURL(objURL);
 }
 
 
-function downloadOBJ()
+function downloadOBJ(filename)
 {
 	if (theSceneManager._scene._renderObject.isInitialized())
 	{
 		var text 		= theSceneManager._scene._renderObject._mesh.convertMeshToOBJ();
-		var filename 	= "result.obj";
 
 		// Trigger a download:
 		var element = document.createElement('a');

@@ -22,3 +22,8 @@ video
 {
     background-color: teal;
 }
+
+.slideContainer
+{
+    float:              left;
+}

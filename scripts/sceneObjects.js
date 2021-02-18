@@ -95,6 +95,8 @@ class sceneManager
 
 				// Upload the wireframe color:
 				this._scene._renderObject._mesh._material._shader.setUniform3fv(gl, 'in_color', this._scene._renderObject._mesh._material._wireframeColor);
+				this._scene._renderObject._mesh._material._shader.setUnform1i('in_isWireframe', 1);
+
 				gl.lineWidth(2.0);	// Deprecated, doesn't seem to have any effect but we set it anyway..
 
 				// Draw!
@@ -129,6 +131,8 @@ class sceneManager
 
 		// Upload appropriate color:
 		activeShader.setUniform3fv(gl, 'in_color', isWireframe ? this._scene._renderObject._mesh._material._wireframeColor : this._scene._renderObject._mesh._material._color);
+
+		this._scene._renderObject._mesh._material._shader.setUnform1i('in_isWireframe', 0);
 	}
 }
 

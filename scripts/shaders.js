@@ -49,6 +49,7 @@ precision highp float;
 // Uniforms:
 uniform vec3 in_cameraPosW;
 uniform vec3 in_color; 			// A single color
+uniform int in_isWireframe;		// Boolean
 
 // Vertex->Fragment inputs:
 varying vec4 fragPosW;
@@ -83,7 +84,6 @@ void main()
 	// Tonemap to [0,1]:
 	shadedColor = shadedColor / (vec3(1) + shadedColor);
 
-	gl_FragColor = vec4(shadedColor, 1.0);
-	//gl_FragColor = vec4(fragNormal, 1.0);
+	gl_FragColor = vec4(in_isWireframe ==  0 ? shadedColor : in_color, 1.0);
 }
 `;
