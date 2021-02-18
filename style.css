@@ -1,0 +1,24 @@
+canvas
+{
+	border: 2px solid black;
+	background-color: black;
+}
+
+video
+{
+	display: none;
+}
+
+.buttonGroup button 
+{
+    color:              white;               /* Text color */
+    background-color:   black;
+    border:             2px solid gray;
+    padding:            8px 18px;
+    float:              center;
+}
+
+.buttonGroup button:hover
+{
+    background-color: teal;
+}
