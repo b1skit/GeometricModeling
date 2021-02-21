@@ -33,9 +33,17 @@ function setActiveShadingMode(shadingMode)
 }
 
 
+// Subdivision:
+function subdivideMesh(subdivisionType, numberOfLevels)
+{
+	theSceneManager._scene._renderObject._mesh.subdivideMesh(parseInt(subdivisionType), parseInt(numberOfLevels));
+}
+
+
 function loadOBJ(objURL)
 {
 	// DEBUG: Override URLS
+	// objURL = 'http://www.sfu.ca/~abadke/temp/pyramid.obj';
 	//objURL = 'https://gist.githubusercontent.com/MaikKlein/0b6d6bb58772c13593d0a0add6004c1c/raw/48cf9c6d1cdd43cc6862d7d34a68114e2b93d497/cube.obj';
 	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/horse_s.obj';
 	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/goodhand.obj';

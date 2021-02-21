@@ -20,6 +20,14 @@ var gl              = null;
 // }
 
 
+// Math literals:
+const FIVE_OVER_EIGHT 	= 5.0 / 8.0;
+const THREE_OVER_EIGHT 	= 3.0 / 8.0;
+const ONE_OVER_FOUR		= 1.0 / 4.0;
+const TWO_PI 			= 2.0 * Math.PI;
+const ONE_OVER_EIGHT	= 1.0 / 8.0;
+
+
 // Shading mode enum:
 const SHADING_MODE = 
 {
@@ -33,6 +41,13 @@ const NORMAL_TYPE =
 {
 	OBJ_OR_FACE : 0,	// Use the normals loaded via the OBJ (or face normals if there were none)
 	SMOOTH		: 1,	// Use the computed smooth normals
+}
+
+
+const SUBDIVISION_TYPE =
+{
+	LOOP 		: 0,
+	BUTTERFLY 	: 1,
 }
 
 

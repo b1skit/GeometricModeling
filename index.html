@@ -52,7 +52,6 @@
 		
 		<p></p>
         <div class="buttonGroup">
-			<!-- <button onclick="loadOBJ(document.getElementById('urlInput').value)">Load mesh file</button> -->
 			
             <button onclick="downloadOBJ(document.getElementById('filenameInput').value)">Download mesh file</button>
 
@@ -70,6 +69,27 @@
 			<button onclick="setActiveShadingMode(2)">Wireframe Shading</button>
             <button onclick="setActiveShadingMode(3)">Smooth + Wireframe Shading</button>
         </div>
+
+		<br>
+
+		<h3>Mesh Subdivision:</h3>
+		<div>
+			<label for="subdivisionDropdown">Choose subdivision scheme:</label>
+			<select name="subdivisionDropdown" id="subdivisionType">
+				<option value="0">Loop</option>
+				<option value="1">Butterfly (TODO)</option>
+			</select>
+
+			<br>
+
+			<label for="numSubdivisionsSlider" id="subdivisionSliderLabel">Number of subdivision iterations: 1</label>
+
+			<input name="numSubdivisionsSlider" id="subdivisionSlider" type="range" min="1" max="20" step="1" value="1" class="slider" oninput="document.getElementById('subdivisionSliderLabel').innerHTML = 'Number of subdivision iterations: ' + this.value"></input>
+
+			<div class="buttonGroup">
+				<button onclick="subdivideMesh(document.getElementById('subdivisionType').value, document.getElementById('subdivisionSlider').value)">Subdivide!</button>
+			</div>
+		</div>
 
         <br>
 

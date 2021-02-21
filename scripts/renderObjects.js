@@ -26,7 +26,7 @@ class renderObject
     // Note: This is required as we load the mesh asyncronously, we might be ready to render before the mesh has downloaded
     isInitialized()
     {
-        return this._mesh._positionsBuffer != null;
+        return this._mesh.isInitialized();
     }
 
 
