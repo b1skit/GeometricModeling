@@ -26,4 +26,11 @@ video
 .slideContainer
 {
     float:              left;
+	width: 30%;
+}
+
+
+.slider
+{
+	width: 90%;
 }
