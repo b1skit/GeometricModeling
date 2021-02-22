@@ -51,6 +51,8 @@ function loadOBJ(objURL)
 	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/wheel.obj';
 	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/walking_monster.obj';
 	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/horse.obj';
+	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/subdivision/chess_piece.obj';
+	
 
 	// Create a new render object and add it to the scene:
 	theRenderObject = new renderObject();

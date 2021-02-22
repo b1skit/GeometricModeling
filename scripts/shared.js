@@ -37,11 +37,6 @@ const SHADING_MODE =
 	SHADED_WIREFRAME	: 3
 };
 
-const NORMAL_TYPE =
-{
-	OBJ_OR_FACE : 0,	// Use the normals loaded via the OBJ (or face normals if there were none)
-	SMOOTH		: 1,	// Use the computed smooth normals
-}
 
 
 const SUBDIVISION_TYPE =

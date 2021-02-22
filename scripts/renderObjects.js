@@ -45,6 +45,8 @@ class renderObject
         // and then manually multiply them
         // https://github.com/toji/gl-matrix/issues/103
         
+		// TODO: Move this to the transform class
+
         // Scale:
         var scaleMatrix = mat4.create();
         mat4.scale(scaleMatrix, scaleMatrix, this._transform._scale);

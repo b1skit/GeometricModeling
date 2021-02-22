@@ -84,7 +84,7 @@
 
 			<label for="numSubdivisionsSlider" id="subdivisionSliderLabel">Number of subdivision iterations: 1</label>
 
-			<input name="numSubdivisionsSlider" id="subdivisionSlider" type="range" min="1" max="20" step="1" value="1" class="slider" oninput="document.getElementById('subdivisionSliderLabel').innerHTML = 'Number of subdivision iterations: ' + this.value"></input>
+			<input name="numSubdivisionsSlider" id="subdivisionSlider" type="range" min="1" max="5" step="1" value="1" class="slider" oninput="document.getElementById('subdivisionSliderLabel').innerHTML = 'Number of subdivision iterations: ' + this.value"></input>
 
 			<div class="buttonGroup">
 				<button onclick="subdivideMesh(document.getElementById('subdivisionType').value, document.getElementById('subdivisionSlider').value)">Subdivide!</button>

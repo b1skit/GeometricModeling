@@ -16,9 +16,6 @@ class face
 	_normals 		= [];
 	_uvs			= [];
 
-	_normalsOBJIndexes 	= [];
-	_uvsOBJIndexes 		= [];
-
 	_faceNormal		= null;
 
     // Winged-edge adjacency references:
@@ -26,13 +23,34 @@ class face
 
     constructor()
     {
-		for (var currentVert = 0; currentVert < 3; currentVert++)
-		{
-			// Initialize the OBJ indexes:
-			this._normalsOBJIndexes.push(-1);
-			this._uvsOBJIndexes.push(-1);
-		}
+
     }
+
+	
+	// Compute the face normal for this face. Call this once the face is otherwise fully initialized
+	computeFaceNormal(hasNormal)
+	{
+		var v1 = vec3.create();				
+		vec3.subtract(v1, this._edge._vertOrigin._position, this._edge._vertDest._position);
+		vec3.normalize(v1, v1);
+
+		var v2 = vec3.create();				
+		vec3.subtract(v2, this._edge._edgeLeftCCW._vertDest._position, this._edge._vertDest._position);
+		vec3.normalize(v2, v2);
+
+		this._faceNormal = vec3.create();
+		vec3.cross(this._faceNormal, v2, v1);
+		vec3.normalize(this._faceNormal, this._faceNormal);
+
+		// If no normals were received in the source OBJ, use the face normal instead:
+		if (!hasNormal)
+		{
+			this._normals.push(this._faceNormal);	// We push it 3 times (once for each vertex)
+			this._normals.push(this._faceNormal);
+			this._normals.push(this._faceNormal);
+		}
+		
+	}
 }
 
 
@@ -85,10 +103,9 @@ class edge
     _faceLeft       = null;
     _faceRight      = null;
 
-    _edgeLeftCW     = null;
-    _edgeLeftCCW    = null;
-    _edgeRightCW    = null;
-    _edgeRightCCW   = null;
+	_edgeLeftCCW    = null;	// The "next" edge in CCW order
+    _edgeLeftCW     = null;	// The "previous" edge in CCW order
+    
 
 	_children		= null;	// For subdivision
 
@@ -140,7 +157,7 @@ class mesh
     _colorBuffer            	= null;     // Vertex colors
     _colorData        			= [];
 	
-	_shadingMode 				= SHADING_MODE.SMOOTH;
+	_shadingMode 				= SHADING_MODE.SHADED_WIREFRAME;
 
     // Winged-edge structure:
     _faces      = null;
@@ -154,6 +171,12 @@ class mesh
     {
 
     }
+
+
+	getInverseEdge(currentEdge)
+	{
+		return this._edges[currentEdge._vertDest._vertIndex][currentEdge._vertOrigin._vertIndex];
+	}
 
 
 	// Subdivision helper: Get the number of edges connected to a vertex
@@ -471,10 +494,6 @@ class mesh
                 {
                     u = extractedUVs[ extractedFaces[currentFace][currentVertex][1] ][0];
                     v = extractedUVs[ extractedFaces[currentFace][currentVertex][1] ][1];
-
-					// Store the index:
-					var UVOBJIndex = extractedFaces[currentFace][0][1];
-					newFace._uvsOBJIndexes[currentVertex] = UVOBJIndex;
                 }
 				// Add the UVs to the face:
 				newFace._uvs.push( vec2.fromValues(u, v) );
@@ -490,13 +509,8 @@ class mesh
 
 					// Add the normals to the face:
 					newFace._normals.push( vec3.fromValues(nx, ny, nz) );
-
-					// Store the index:
-					var normalOBJIndex = extractedFaces[currentFace][0][2];
-					newFace._normalsOBJIndexes[currentVertex] = normalOBJIndex;
                 }
 			} // end vertex construction
-
 
 			var newFaceEdges = [
 				new edge(newFaceVerts[0], newFaceVerts[1]),
@@ -508,27 +522,6 @@ class mesh
 			for (var currentEdge = 0; currentEdge < 3; currentEdge++)
 			{
 				newFaceEdges[currentEdge] = this.addEdgeIfUnique(newFaceEdges[currentEdge]);
-			}
-
-			// Construct face normal:
-			var v1 = vec3.create();				
-			vec3.subtract(v1, newFaceVerts[0]._position, newFaceVerts[1]._position);
-			vec3.normalize(v1, v1);
-
-			var v2 = vec3.create();				
-			vec3.subtract(v2, newFaceVerts[2]._position, newFaceVerts[1]._position);
-			vec3.normalize(v2, v2);
-
-			newFace._faceNormal = vec3.create();
-			vec3.cross(newFace._faceNormal, v2, v1);
-			vec3.normalize(newFace._faceNormal, newFace._faceNormal);
-
-			// If no normals were received, use the face normal
-			if (!hasNormal)
-			{				
-				newFace._normals.push(newFace._faceNormal);	// We push it 3 times (once for each vertex)
-				newFace._normals.push(newFace._faceNormal);
-				newFace._normals.push(newFace._faceNormal);
 			}
 
 			// Update the pointers:
@@ -551,31 +544,38 @@ class mesh
 				}
 
 				// Update edge pointers:
-				var nextEdgeIndex	= (currentEdge + 1) % 3;	// next/prev w.r.t CCW
+				var nextEdgeIndex	= (currentEdge + 1) % 3;
 				var prevEdgeIndex	= currentEdge == 0 ? 2 : ((currentEdge - 1) % 3);
 
 				// Current edge: CW, CCW:
 				newFaceEdges[currentEdge]._edgeLeftCCW 	= newFaceEdges[nextEdgeIndex];
 				newFaceEdges[currentEdge]._edgeLeftCW 	= newFaceEdges[prevEdgeIndex];
-
-				// Inverse edge: Right CCW
-				var nextCCWEdgeOriginVertIndex 	= destVertIndex;
-				var nextCCWEdgeDestVertIndex 	= newFaceEdges[currentEdge]._edgeLeftCCW._vertDest._vertIndex;
-				inverseEdge._edgeRightCCW 		= this._edges[nextCCWEdgeOriginVertIndex][nextCCWEdgeDestVertIndex];
-
-				// Inverse edge: Right CW
-				var prevCWEdgeDestVertIndex 	= originVertIndex;
-				var prevCWEdgeOriginVertIndex 	= newFaceEdges[currentEdge]._edgeLeftCW._vertOrigin._vertIndex;
-				inverseEdge._edgeRightCW 		= this._edges[prevCWEdgeDestVertIndex][prevCWEdgeOriginVertIndex];
 			}
 
 			// Now that we have our final edges, update the face -> edge pointer
 			newFace._edge 	= newFaceEdges[0];
-			this._faces.push(newFace);
+
+			// Now that we've set the edges, compute the face normal:
+			newFace.computeFaceNormal(hasNormal);
+			
+			this._faces.push(newFace);			
 
         }	// end face parsing
 
-		// Prepare to compute smooth normals (results here are averaged during initializeBuffers()):
+		// Compute the smooth normals:
+		this.computeSmoothNormals();
+
+		console.log("[mesh::constructMeshFromOBJData] Extracted " + this._vertices.length + " vertices, " + (this._faces.length * 3) + " (bi-directional) edges, " + this._faces.length + " faces to the winged data structure");
+
+        // Finally, initialize the render object mesh's vertex buffers:
+        this.initializeBuffers();
+    }
+
+
+	// Compute smooth/averaged normals for a loaded mesh:
+	computeSmoothNormals()
+	{
+		// Sum the neighboring face normals:
 		for (var currentFace = 0; currentFace < this._faces.length; currentFace++)
 		{
 			var startEdge 	= this._faces[currentFace]._edge;
@@ -590,37 +590,18 @@ class mesh
 			} while (currentEdge != startEdge);
 		}
 
-		console.log("[mesh::constructMeshFromOBJData] Extracted " + this._vertices.length + " vertices, " + (this._faces.length * 3) + " (bi-directional) edges, " + this._faces.length + " faces to the winged data structure");
+		// Average the results:
+		for (var currentVert = 0; currentVert < this._vertices.length; currentVert++)
+		{
+			if (this._vertices[currentVert._adjacentFaces > 0])
+			{
+				var denominator = vec3.fromValues(this._vertices[currentVert]._adjacentFaces, this._vertices[currentVert]._adjacentFaces, this._vertices[currentVert]._adjacentFaces);
+				vec3.divide(this._vertices[currentVert]._smoothedNormal, this._vertices[currentVert]._smoothedNormal, denominator);
 
-
-		// for (var currentFace = 0; currentFace < this._faces.length; currentFace++)
-		// {
-		// 	var startEdge = this._faces[currentFace]._edge;
-		// 	var currentEdge = startEdge;
-		// 	var count = 0;
-		// 	do{
-		// 		count++;
-		// 		if (currentEdge._edgeRightCW == null)
-		// 		{
-		// 			console.log("FOUND IT");
-		// 			console.log(currentEdge);
-		// 		}
-		// 		else console.log("OK");
-
-		// 		// if (newEdges[][] === null)
-
-		// 		currentEdge = currentEdge._edgeLeftCCW;
-
-		// 	}while(currentEdge != startEdge);
-		// 	if(count != 3) console.log("WRONG COUNT");
-		// }
-		
-
-
-
-        // Finally, initialize the render object mesh's vertex buffers:
-        this.initializeBuffers();
-    }
+				vec3.normalize(this._vertices[currentVert]._smoothedNormal, this._vertices[currentVert]._smoothedNormal);
+			}
+		}
+	}
 
 
 	// Is a valid mesh loaded and ready to render?
@@ -630,6 +611,7 @@ class mesh
 	}
 
 
+	// Helper function: Calls the appropriate subdivision function
 	subdivideMesh(subdivisionType, numberOfLevels)
 	{
 		if(!this.isInitialized())
@@ -642,7 +624,10 @@ class mesh
 		{
 			case SUBDIVISION_TYPE.LOOP:
 			{
-				this.loopSubdivision(numberOfLevels);
+				for (var currentIteration = 0; currentIteration < numberOfLevels; currentIteration++)
+				{
+					this.loopSubdivision();
+				}
 			}
 			break;
 
@@ -658,7 +643,8 @@ class mesh
 	}
 
 
-	loopSubdivision(numberOfLevels)
+	// Subdivide this mesh using loop subdivision:
+	loopSubdivision()
 	{
 		this._vertexDegreeIsDirty = true;	// Mark the vertex degree count as dirty to ensure we recalculate the degrees
 
@@ -674,12 +660,6 @@ class mesh
 				}
 			}
 		}
-
-		if (totalEdges % 2 != 0)
-		{
-			console.log("ERROR! Found odd number of edges!!!")
-		}
-
 		totalEdges /= 2; // Edges are bi-directional, so we must halve the count
 
 		// Calculate the number of vertices in the subdivided mesh:
@@ -719,14 +699,10 @@ class mesh
 			var beta 			= (1.0 / currentDegree) * (FIVE_OVER_EIGHT - Math.pow(THREE_OVER_EIGHT + ONE_OVER_FOUR * Math.cos(TWO_PI / currentDegree), 2));
 			var oneMinusNBeta 	=  1.0 - (currentDegree * beta);
 
+			// Get neighbors of the current vert:
 			var neighborVerts = this.getVertexNeighbors(currentVert);
 
-			if (currentDegree != neighborVerts.length) // DEBUG DELME!!!!
-			{
-				console.log("ERROR: Degree should match the number of neighbors!!!!!!");
-			}
-
-			// Apply the vertex rule at the neighbors:
+			// Apply the vertex rule at each neighbors:
 			var sumPositions = vec3.create();
 			for (var currentNeighbor = 0; currentNeighbor < neighborVerts.length; currentNeighbor++)
 			{
@@ -752,60 +728,12 @@ class mesh
 			newVerts[currentVert] = replacementVert;
 		}
 		
-
-
 		// Track which first empty index of the new vertex table we're inserting into
 		var nextNewVertIndex = this._vertices.length;	
-
-
-		// for (var currentFace = 0; currentFace < this._faces.length; currentFace++)
-		// {
-		// 	var startEdge = this._faces[currentFace]._edge;
-		// 	var currentEdge = startEdge;
-		// 	var count = 0;
-		// 	do{
-		// 		count++;
-		// 		if (currentEdge._edgeRightCW == null)
-		// 		{
-		// 			console.log("FOUND IT");
-		// 			console.log(currentEdge);
-		// 		}
-		// 		else console.log("OK");
-
-		// 		// if (newEdges[][] === null)
-
-		// 		currentEdge = currentEdge._edgeLeftCCW;
-
-		// 	}while(currentEdge != startEdge);
-		// 	if(count != 3) console.log("WRONG COUNT");
-		// }
-
-
 
 		// Subdivide existing edges of each face:
 		for (var currentFace = 0; currentFace < this._faces.length; currentFace++)
 		{
-
-			
-			// var startEdge = this._faces[currentFace];
-			// var currentEdge = startEdge;
-			// var count = 0;
-			// do{
-			// 	count++;
-			// 	if (currentEdge._edgeRightCW == null)
-			// 	{
-			// 		console.log("FOUND IT");
-			// 	}
-			// 	else console.log("OK");
-
-			// 	// if (newEdges[][] === null)
-
-			// 	currentEdge = currentEdge._edgeLeftCCW;
-
-			// }while(currentEdge != startEdge);
-			// if(count != 3) console.log("WRONG COUNT");
-
-
 			// Traverse the edges of the face:
 			var startEdge 	= this._faces[currentFace]._edge;
 			var currentEdge = startEdge;
@@ -816,7 +744,6 @@ class mesh
 				{
 					// Prepare for the next iteration:
 					currentEdge = currentEdge._edgeLeftCCW;
-
 					continue;
 				}
 
@@ -825,12 +752,10 @@ class mesh
 				vec3.add(scaledStartEndPositions, currentEdge._vertOrigin._position, currentEdge._vertDest._position);
 				vec3.scale(scaledStartEndPositions, scaledStartEndPositions, THREE_OVER_EIGHT);
 
-				console.log(currentEdge);
-				console.log(currentEdge._edgeRightCW);	 // problem: edgeRightCW pointer is null
-
 				// Apply the edge rule to the "side" verts:
 				var scaledSideVerts = vec3.create();
-				vec3.add(scaledSideVerts, currentEdge._edgeLeftCCW._vertDest._position, currentEdge._edgeRightCW._vertDest._position);
+				var inverseEdge = this.getInverseEdge(currentEdge);
+				vec3.add(scaledSideVerts, currentEdge._edgeLeftCCW._vertDest._position, inverseEdge._edgeLeftCCW._vertDest._position);
 				vec3.scale(scaledSideVerts, scaledSideVerts, ONE_OVER_EIGHT);
 
 				// Construct the new vertex position:
@@ -849,7 +774,6 @@ class mesh
 				newVerts[nextNewVertIndex] = newVert;		
 				
 				nextNewVertIndex++; // Increment for the next vertex we'll add
-
 
 				// Construct the new sub-edges, and add them to the new edges list:
 				var edge1 = new edge(
@@ -886,12 +810,10 @@ class mesh
 				currentEdge._children 			= [edge1, edge2];
 				inverseCurrentEdge._children 	= [edge2Inverse, edge1Inverse];
 				
-
 				// Prepare for the next iteration:
 				currentEdge = currentEdge._edgeLeftCCW;
 			} while (currentEdge != startEdge);
 		}
-
 
 		// Connect the new sub-edges to create new sub-triangle faces:
 		for (var currentFace = 0; currentFace < this._faces.length; currentFace++)
@@ -941,69 +863,33 @@ class mesh
 				currentEdge._children[0]._edgeLeftCW 	= prevEdge._children[1];
 				newEdge._edgeLeftCW 					= currentEdge._children[0];
 
-				// Link the inverse edge right pointers:
-				var inverseCurrentEdge 	= this._edges[currentEdge._vertDest._vertIndex][currentEdge._vertOrigin._vertIndex];
-				var inverseNextEdge 	= inverseCurrentEdge._edgeRightCW;
-
-				inverseCurrentEdge._children[1]._edgeRightCCW 	= inverseNewEdge;
-				inverseNextEdge._children[0]._edgeRightCCW 		= inverseCurrentEdge._children[1];
-				inverseNewEdge._edgeRightCCW					= inverseNextEdge._children[0];
-
-				inverseCurrentEdge._children[1]._edgeRightCW 	= inverseNextEdge._children[0];
-				inverseNextEdge._children[0]._edgeRightCW 		= inverseNewEdge;
-				inverseNewEdge._edgeRightCW 					= inverseCurrentEdge._children[1];
-
 				// Link the left face pointers:
 				prevEdge._children[1]._faceLeft 	= newFace;
 				newEdge._faceLeft 					= newFace;
 				currentEdge._children[0]._faceLeft 	= newFace;
 
-				// Link the right face pointers for each edge of the new sub-triangle, if we can:
-				// if(newEdges[currentEdge._vertOrigin._vertIndex][prevNewVert._vertIndex]._faceLeft != null )
-				{
-					// Check the inverses of the edges of the new sub-triangle:
-					newEdges[currentEdge._vertOrigin._vertIndex][prevNewVert._vertIndex]._faceRight = newFace;
-					prevEdge._children[1]._faceRight = newEdges[currentEdge._vertOrigin._vertIndex][prevNewVert._vertIndex]._faceLeft;
+				// Update the inverse edge face pointers
+				newEdges[currentEdge._vertOrigin._vertIndex][prevNewVert._vertIndex]._faceRight = newFace;
+				prevEdge._children[1]._faceRight = newEdges[currentEdge._vertOrigin._vertIndex][prevNewVert._vertIndex]._faceLeft;
 
-					// Update right edge pointers:
-					newEdges[prevNewVert._vertIndex][currentEdge._vertOrigin._vertIndex]._edgeRightCW 	= newEdges[currentEdge._vertOrigin._vertIndex][prevNewVert._vertIndex]._edgeLeftCW;
-					newEdges[prevNewVert._vertIndex][currentEdge._vertOrigin._vertIndex]._edgeRightCCW 	= newEdges[currentEdge._vertOrigin._vertIndex][prevNewVert._vertIndex]._edgeLeftCCW;
-				}
+				newEdges[currentNewVert._vertIndex][currentEdge._vertOrigin._vertIndex]._faceRight = newFace;
+				currentEdge._children[0]._faceRight = newEdges[currentNewVert._vertIndex][currentEdge._vertOrigin._vertIndex]._faceLeft;
 
-				// if (newEdges[currentNewVert._vertIndex][currentEdge._vertOrigin._vertIndex]._faceLeft != null)
-				{
-					newEdges[currentNewVert._vertIndex][currentEdge._vertOrigin._vertIndex]._faceRight = newFace;
-					currentEdge._children[0]._faceRight = newEdges[currentNewVert._vertIndex][currentEdge._vertOrigin._vertIndex]._faceLeft;
+				// Compute the face normal:
+				newFace.computeFaceNormal(false);
 
-					// Update right edge pointers:
-					newEdges[currentEdge._vertOrigin._vertIndex][currentNewVert._vertIndex]._edgeRightCW 	= newEdges[currentNewVert._vertIndex][currentEdge._vertOrigin._vertIndex]._edgeLeftCW;
-					newEdges[currentEdge._vertOrigin._vertIndex][currentNewVert._vertIndex]._edgeRightCCW 	= newEdges[currentNewVert._vertIndex][currentEdge._vertOrigin._vertIndex]._edgeLeftCCW;
-				}
-
-				// TEMP HACK: COPY THE CURRENT FACE NORMALS TO THE SUB-FACE. TODO: HANDLE THIS CORRECTLY!!!!!!!!!!!!!!
-				newFace._normals	= this._faces[currentFace]._normals;
-				newFace._faceNormal = this._faces[currentFace]._faceNormal;
+				// TODO: Compute and upload valid UVs. For now, we just duplicate the parent face
 				newFace._uvs 		= this._faces[currentFace]._uvs;
-
-
-				// if (newEdge._edgeRightCW === null) console.log("GOTCHA");
-				// else console.log("ITS OK");
-				// console.log(currentEdge);
-				// console.log(currentEdge._edgeRightCW);
 
 				// Prepare for the next iteration:
 				currentEdge = currentEdge._edgeLeftCCW;
-
-				
-
 			} while (currentEdge != startEdge);
 
-
-			// Finally, create the inner face:
+			// Create the inner face:
 			var newFace 	= new face();
 			newFace._edge 	= createdInverseEdges[0];
 		
-
+			// Update the pointers for the new face:
 			for (var currentEdge = 0; currentEdge < createdInverseEdges.length; currentEdge++)
 			{
 				createdEdges[currentEdge]._faceRight 		= newFace;
@@ -1014,95 +900,33 @@ class mesh
 
 				createdInverseEdges[currentEdge]._edgeLeftCCW 	= createdInverseEdges[nextEdgeIndex];
 				createdInverseEdges[currentEdge]._edgeLeftCW 	= createdInverseEdges[prevEdgeIndex];
-
-				var originVertIndex = createdInverseEdges[currentEdge]._vertOrigin._vertIndex;
-				var destVertIndex 	= createdInverseEdges[currentEdge]._vertDest._vertIndex;
-
-				createdInverseEdges[currentEdge]._edgeRightCCW 	= newEdges[destVertIndex][originVertIndex]._edgeLeftCW;
-				createdInverseEdges[currentEdge]._edgeRightCW 	= newEdges[destVertIndex][originVertIndex]._edgeLeftCCW;
-
-				
-				createdEdges[currentEdge]._edgeRightCW 	= createdInverseEdges[prevEdgeIndex];
-				createdEdges[currentEdge]._edgeRightCCW = createdInverseEdges[destVertIndex];
-
-				
-
-				if (createdInverseEdges[currentEdge]._edgeLeftCCW === null ||
-					createdInverseEdges[currentEdge]._edgeLeftCW === null
-					) 
-					console.log("GOTCHA!!!!!!!!!!!!!!!!!");
 			}
 
-			var startEdge = newFace._edge;
-			var currentEdge = startEdge;
-			var count = 0;
-			do{
-				count++;
-				if (currentEdge._edgeRightCW == null)
-				{
-					console.log("FOUND IT");
-				}
-				else console.log("OK");
+			// Compute the face normal:
+			newFace.computeFaceNormal(false);
 
-				// if (newEdges[][] === null)
-
-				currentEdge = currentEdge._edgeLeftCCW;
-
-			}while(currentEdge != startEdge);
-			if(count != 3) console.log("WRONG COUNT");
-
-			// TEMP HACK: COPY THE CURRENT FACE NORMALS TO THE SUB-FACE. TODO: HANDLE THIS CORRECTLY!!!!!!!!!!!!!!
-			newFace._normals	= this._faces[currentFace]._normals;
-			newFace._faceNormal = this._faces[currentFace]._faceNormal;
+			// TODO: Compute and upload valid UVs. For now, we just duplicate the parent face
 			newFace._uvs 		= this._faces[currentFace]._uvs;
 
-
+			// Finally, store the inner face:
 			newFaces.push(newFace);
 
 		} // end faces loop
 
-
-		// for (var currentFace = 0; currentFace < newFaces.length; currentFace++)
-		// {
-		// 	// Traverse the edges of the face:
-		// 	var startEdge 	= newFaces[currentFace]._edge;
-		// 	var currentEdge = startEdge;
-		// 	var count = 0;
-		// 	do
-		// 	{
-		// 		count++;
-		// 		if (currentEdge._vertDest._vertIndex != currentEdge._edgeLeftCCW._vertOrigin._vertIndex)
-		// 		{
-		// 			console.log("BAD!!!");
-		// 		}
-		// 		else console.log("GOOD");
-
-		// 		currentEdge = currentEdge._edgeLeftCCW;
-		// 	} while(currentEdge != startEdge);
-		// 	if(count!=3) console.log("BAD COUNT");
-		// }
-
-
-		console.log(newVerts);
-		console.log(newEdges);
-		console.log(newFaces);
-
-
+		// Store the results:
 		this._faces 	= newFaces;
 		this._edges 	= newEdges;
 		this._vertices 	= newVerts;
 
+		// Compute smooth normals:
+		this.computeSmoothNormals();
+
 		// Finally, re-initialize the render object mesh's vertex buffers:
         this.initializeBuffers();
-
-		// TODO: 
-		// SOLVE MISSING POINTERS
-		// HANDLE FACE + SMOOTH NORMALS
-		// IMPLEMENT MULTIPLE ITERATIONS
-		// OUTPUT OBJ NORMALS BASED ON CURRENT SHADING MODE
 	}
 
 
+	// Convert a mesh to OBJ format for download:
 	convertMeshToOBJ()
 	{
 		var objText = "# OBJ output: CMPT 764, Adam Badke\n\n";
@@ -1112,7 +936,6 @@ class mesh
 		{			
 			objText += "v " + this.formatFloatValueForOBJOutput(this._vertices[currentVert]._position[0]) + " " + this.formatFloatValueForOBJOutput(this._vertices[currentVert]._position[1]) + " " + this.formatFloatValueForOBJOutput(this._vertices[currentVert]._position[2]) + "\n";
 		}
-
 
 		var uvSection 		= "";
 		var normalSection 	= "";
@@ -1236,15 +1059,6 @@ class mesh
 			// Process each vert for the current face:
 			for (var currentVert = 0; currentVert < 3; currentVert++)
 			{
-				// Average the smoothed normal, if required:
-				if (currentEdge._vertOrigin._adjacentFaces > 0)
-				{
-					var denominator = vec3.fromValues(currentEdge._vertOrigin._adjacentFaces, currentEdge._vertOrigin._adjacentFaces, currentEdge._vertOrigin._adjacentFaces);
-					vec3.divide(currentEdge._vertOrigin._smoothedNormal, currentEdge._vertOrigin._smoothedNormal, denominator);
-
-					vec3.normalize(currentEdge._vertOrigin._smoothedNormal, currentEdge._vertOrigin._smoothedNormal);
-				}
-
 				// Push the current origin vertex, looping over the x, y, z coords:
 				for (var currentElement = 0; currentElement < 3; currentElement++)
 				{
@@ -1291,7 +1105,6 @@ class mesh
             new Float32Array(this._wireframePositionsData),  // Note: We must convert our JS array to a Float32Array
             gl.STATIC_DRAW
         );
-
 
         // Create, bind, and buffer OBJ vertex normals:
         this._OBJNormalsBuffer = gl.createBuffer();
@@ -1349,7 +1162,8 @@ class mesh
         // Bind the appropriate normal buffer:
 		switch(this._shadingMode)
 		{
-			case NORMAL_TYPE.SMOOTH:
+			case SHADING_MODE.SMOOTH:
+			case SHADING_MODE.SHADED_WIREFRAME:
 			{
 				gl.bindBuffer(gl.ARRAY_BUFFER, this._smoothNormalsBuffer);
 			}
@@ -1357,7 +1171,6 @@ class mesh
 
 			case SHADING_MODE.FLAT:
 			case SHADING_MODE.WIREFRAME:
-			case NORMAL_TYPE.OBJ_OR_FACE:
 			default:
 			{
 				gl.bindBuffer(gl.ARRAY_BUFFER, this._OBJNormalsBuffer);
