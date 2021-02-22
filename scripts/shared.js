@@ -21,12 +21,23 @@ var gl              = null;
 
 
 // Math literals:
-const FIVE_OVER_EIGHT 	= 5.0 / 8.0;
-const THREE_OVER_EIGHT 	= 3.0 / 8.0;
-const ONE_OVER_FOUR		= 1.0 / 4.0;
-const TWO_PI 			= 2.0 * Math.PI;
-const ONE_OVER_EIGHT	= 1.0 / 8.0;
+const TWO_PI 				= 2.0 * Math.PI;
+const FOUR_PI				= 4.0 * Math.PI;
 
+const ONE_OVER_TWO			= 1.0 / 2.0;
+
+const THREE_OVER_FOUR 		= 3.0 / 4.0;
+const ONE_OVER_FOUR			= 1.0 / 4.0;
+
+const ONE_OVER_EIGHT		= 1.0 / 8.0;
+const THREE_OVER_EIGHT 		= 3.0 / 8.0;
+const FIVE_OVER_EIGHT 		= 5.0 / 8.0;
+
+const FIVE_OVER_TWELVE 		= 5.0 / 12.0;
+
+const NEG_ONE_OVER_EIGHT	= -1.0 / 8.0;
+const NEG_ONE_OVER_TWELVE	= -1.0 / 12.0;
+const NEG_ONE_OVER_SIXTEEN	= -1.0 / 16.0;
 
 // Shading mode enum:
 const SHADING_MODE = 

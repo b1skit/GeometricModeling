@@ -620,31 +620,23 @@ class mesh
 			return;
 		}
 
-		switch(subdivisionType)
+		if (subdivisionType < SUBDIVISION_TYPE.LOOP || subdivisionType > SUBDIVISION_TYPE.BUTTERFLY)
 		{
-			case SUBDIVISION_TYPE.LOOP:
-			{
-				for (var currentIteration = 0; currentIteration < numberOfLevels; currentIteration++)
-				{
-					this.loopSubdivision();
-				}
-			}
-			break;
+			console.log("[mesh][subdivideMesh] Invalid subdivision type received! Aborting");
+			return;
+		}
 
-			case SUBDIVISION_TYPE.BUTTERFLY:
-			{
-				alert("Butterfly subdivision is not yet implemented. Please try Loop subdivision!");
-			}
-			break;
-
-			default:
-				console.log("[mesh][subdivideMesh] Invalid subdivision type received! " + subdivisionType);
+		// Perform the required number of iterations:
+		for (var currentIteration = 0; currentIteration < numberOfLevels; currentIteration++)
+		{
+			console.log(numberOfLevels);
+			this.doSubdivideMesh(subdivisionType);
 		}
 	}
 
 
-	// Subdivide this mesh using loop subdivision:
-	loopSubdivision()
+	// Subdivide this mesh:
+	doSubdivideMesh(subdivisionMode)
 	{
 		this._vertexDegreeIsDirty = true;	// Mark the vertex degree count as dirty to ensure we recalculate the degrees
 
@@ -688,44 +680,61 @@ class mesh
 		// Add transformed copies of original verts to the new table:
 		for (var currentVert = 0; currentVert < this._vertices.length; currentVert++)
 		{
-			var currentDegree = this.getVertexDegree(currentVert);
-
-			if (currentDegree < 3)
+			if (subdivisionMode == SUBDIVISION_TYPE.LOOP)
 			{
-				console.log("[mesh][loopSubdivision] ERROR: Found a vertex with degree < 3");
-				return;
+				var currentDegree = this.getVertexDegree(currentVert);
+
+				if (currentDegree < 3)
+				{
+					console.log("[mesh][subdivideMesh] ERROR: Found a vertex with degree < 3");
+					return;
+				}
+	
+				var beta 			= (1.0 / currentDegree) * (FIVE_OVER_EIGHT - Math.pow(THREE_OVER_EIGHT + ONE_OVER_FOUR * Math.cos(TWO_PI / currentDegree), 2));
+				var oneMinusNBeta 	=  1.0 - (currentDegree * beta);
+	
+				// Get neighbors of the current vert:
+				var neighborVerts = this.getVertexNeighbors(currentVert);
+	
+				// Apply the vertex rule at each neighbors:
+				var sumPositions = vec3.create();
+				for (var currentNeighbor = 0; currentNeighbor < neighborVerts.length; currentNeighbor++)
+				{
+					vec3.add(sumPositions, sumPositions, neighborVerts[currentNeighbor]._position);
+				}
+				vec3.scale(sumPositions, sumPositions, beta);
+	
+				// Apply the vertex rule at the current vertex:
+				var scaledCurrentPosition = vec3.create();
+				vec3.scale(scaledCurrentPosition, this._vertices[currentVert]._position, oneMinusNBeta);
+	
+				// Combine the weighted neighbor and current vertex positions:
+				vec3.add(scaledCurrentPosition, scaledCurrentPosition, sumPositions);
+	
+				var replacementVert = new vertex(
+					scaledCurrentPosition[0],
+					scaledCurrentPosition[1],
+					scaledCurrentPosition[2],
+					this._vertices[currentVert]._vertIndex
+				);
+	
+				// Finally, add the replacement vert to our new vertex array:
+				newVerts[currentVert] = replacementVert;
 			}
-
-			var beta 			= (1.0 / currentDegree) * (FIVE_OVER_EIGHT - Math.pow(THREE_OVER_EIGHT + ONE_OVER_FOUR * Math.cos(TWO_PI / currentDegree), 2));
-			var oneMinusNBeta 	=  1.0 - (currentDegree * beta);
-
-			// Get neighbors of the current vert:
-			var neighborVerts = this.getVertexNeighbors(currentVert);
-
-			// Apply the vertex rule at each neighbors:
-			var sumPositions = vec3.create();
-			for (var currentNeighbor = 0; currentNeighbor < neighborVerts.length; currentNeighbor++)
+			else if (subdivisionMode == SUBDIVISION_TYPE.BUTTERFLY)
 			{
-				vec3.add(sumPositions, sumPositions, neighborVerts[currentNeighbor]._position);
+				// Butterfly is interpolating: We just copy the verts as-is:
+
+				var replacementVert = new vertex(
+					this._vertices[currentVert]._position[0],
+					this._vertices[currentVert]._position[1],
+					this._vertices[currentVert]._position[2],
+					this._vertices[currentVert]._vertIndex
+				);
+
+				// Finally, add the copied vert to our new vertex array:
+				newVerts[currentVert] = replacementVert;
 			}
-			vec3.scale(sumPositions, sumPositions, beta);
-
-			// Apply the vertex rule at the current vertex:
-			var scaledCurrentPosition = vec3.create();
-			vec3.scale(scaledCurrentPosition, this._vertices[currentVert]._position, oneMinusNBeta);
-
-			// Combine the weighted neighbor and current vertex positions:
-			vec3.add(scaledCurrentPosition, scaledCurrentPosition, sumPositions);
-
-			var replacementVert = new vertex(
-				scaledCurrentPosition[0],
-				scaledCurrentPosition[1],
-				scaledCurrentPosition[2],
-				this._vertices[currentVert]._vertIndex
-			);
-
-			// Finally, add the replacement vert to our new vertex array:
-			newVerts[currentVert] = replacementVert;
 		}
 		
 		// Track which first empty index of the new vertex table we're inserting into
@@ -747,20 +756,102 @@ class mesh
 					continue;
 				}
 
-				// Apply the edge rule to the start/end verts:
-				var scaledStartEndPositions = vec3.create();
-				vec3.add(scaledStartEndPositions, currentEdge._vertOrigin._position, currentEdge._vertDest._position);
-				vec3.scale(scaledStartEndPositions, scaledStartEndPositions, THREE_OVER_EIGHT);
-
-				// Apply the edge rule to the "side" verts:
-				var scaledSideVerts = vec3.create();
-				var inverseEdge = this.getInverseEdge(currentEdge);
-				vec3.add(scaledSideVerts, currentEdge._edgeLeftCCW._vertDest._position, inverseEdge._edgeLeftCCW._vertDest._position);
-				vec3.scale(scaledSideVerts, scaledSideVerts, ONE_OVER_EIGHT);
-
-				// Construct the new vertex position:
 				var newVertPosition = vec3.create();
-				vec3.add(newVertPosition, scaledStartEndPositions, scaledSideVerts);
+
+				if (subdivisionMode == SUBDIVISION_TYPE.LOOP)
+				{
+					// Apply the edge rule to the start/end verts:
+					var scaledStartEndPositions = vec3.create();
+					vec3.add(scaledStartEndPositions, currentEdge._vertOrigin._position, currentEdge._vertDest._position);
+					vec3.scale(scaledStartEndPositions, scaledStartEndPositions, THREE_OVER_EIGHT);
+
+					// Apply the edge rule to the "side" verts:
+					var scaledSideVerts = vec3.create();
+					var inverseEdge = this.getInverseEdge(currentEdge);
+					vec3.add(scaledSideVerts, currentEdge._edgeLeftCCW._vertDest._position, inverseEdge._edgeLeftCCW._vertDest._position);
+					vec3.scale(scaledSideVerts, scaledSideVerts, ONE_OVER_EIGHT);
+
+					vec3.add(newVertPosition, scaledStartEndPositions, scaledSideVerts);
+				}
+				else if (subdivisionMode == SUBDIVISION_TYPE.BUTTERFLY)
+				{
+					var currentOriginDegree = this.getVertexDegree(currentEdge._vertOrigin._vertIndex);
+					var currentDestDegree 	= this.getVertexDegree(currentEdge._vertDest._vertIndex);
+
+					// Handle regular verts:
+					if (currentOriginDegree == 6 && currentDestDegree == 6)
+					{
+						// Start/edge verts:
+						vec3.add(newVertPosition, currentEdge._vertOrigin._position, currentEdge._vertDest._position);
+						vec3.scale(newVertPosition, newVertPosition, ONE_OVER_TWO);
+
+						var inverseEdge = this.getInverseEdge(currentEdge);
+
+						// "Side" verts:
+						var scaledSideVerts = vec3.create();
+						vec3.add(scaledSideVerts, currentEdge._edgeLeftCCW._vertDest._position, inverseEdge._edgeLeftCCW._vertDest._position);
+						vec3.scale(scaledSideVerts, scaledSideVerts, ONE_OVER_EIGHT);
+
+						vec3.add(newVertPosition, newVertPosition, scaledSideVerts);
+
+						// Diagonal verts:
+						var scaledDiagonalVerts = vec3.create();
+
+						// Top right:
+						vec3.add(scaledDiagonalVerts, scaledDiagonalVerts, this.getInverseEdge(currentEdge._edgeLeftCCW)._edgeLeftCCW._vertDest._position);
+
+						// Top left:
+						vec3.add(scaledDiagonalVerts, scaledDiagonalVerts, this.getInverseEdge(currentEdge._edgeLeftCCW._edgeLeftCCW)._edgeLeftCCW._vertDest._position);
+
+						// Bottom left:
+						vec3.add(scaledDiagonalVerts, scaledDiagonalVerts, this.getInverseEdge( this.getInverseEdge(currentEdge)._edgeLeftCCW )._edgeLeftCCW._vertDest._position);
+
+						// Bottom right:
+						vec3.add(scaledDiagonalVerts, scaledDiagonalVerts, this.getInverseEdge( this.getInverseEdge(currentEdge)._edgeLeftCCW._edgeLeftCCW )._edgeLeftCCW._vertDest._position);
+						vec3.scale(scaledDiagonalVerts, scaledDiagonalVerts, NEG_ONE_OVER_SIXTEEN);
+
+						vec3.add(newVertPosition, newVertPosition, scaledDiagonalVerts);
+					
+					}
+					else if (currentOriginDegree != 6 && currentDestDegree != 6)
+					{
+						// Handle irregular verts at both ends: Take the average of applying the rules to both endpoints:
+
+						var neighbors 	= this.getVertexNeighbors(currentEdge._vertDest._vertIndex);
+						var result1		= this.getButterflyWeightedVertex(neighbors, currentEdge._vertOrigin, currentEdge._vertDest);
+
+						neighbors 		= this.getVertexNeighbors(currentEdge._vertOrigin._vertIndex);
+						var result2 	= this.getButterflyWeightedVertex(neighbors, currentEdge._vertDest, currentEdge._vertOrigin);
+						
+						// Average the result:
+						vec3.add(newVertPosition, result1, result2);
+						vec3.scale(newVertPosition, newVertPosition, 0.5);
+
+					}
+					else // Handle edges with 1 regular vert:
+					{
+						var theRegularVert;
+						var theIrregularVert;
+
+						var neighbors;
+						if (currentOriginDegree == 6)
+						{
+							neighbors = this.getVertexNeighbors(currentEdge._vertDest._vertIndex);
+
+							theRegularVert 		= currentEdge._vertOrigin;
+							theIrregularVert 	= currentEdge._vertDest;
+						}
+						else //currentDestDegree == 6
+						{
+							neighbors = this.getVertexNeighbors(currentEdge._vertOrigin._vertIndex);
+
+							theRegularVert 		= currentEdge._vertDest;
+							theIrregularVert 	= currentEdge._vertOrigin;
+						}
+
+						newVertPosition = this.getButterflyWeightedVertex(neighbors, theRegularVert, theIrregularVert);
+					}			
+				}
 
 				// Construct the new vertex:
 				var newVert = new vertex(
@@ -923,6 +1014,102 @@ class mesh
 
 		// Finally, re-initialize the render object mesh's vertex buffers:
         this.initializeBuffers();
+	}
+
+
+	// Butterfly subdivision helper: Get a blended vertex positon
+	getButterflyWeightedVertex(neighbors, theRegularVert, theIrregularVert)
+	{
+		var newVertPosition = vec3.create();
+
+		if (neighbors.length == 3) // K = 3:
+		{
+			// S0:
+			vec3.scale(newVertPosition, theRegularVert._position, FIVE_OVER_TWELVE);
+
+			// S1,2:
+			var weightedNeighbors = vec3.create();
+			for (var currentNeighbor = 0; currentNeighbor < neighbors.length; currentNeighbor++)
+			{
+				if (neighbors[currentNeighbor]._vertIndex != theRegularVert._vertIndex)
+				{
+					vec3.add(weightedNeighbors, weightedNeighbors, neighbors[currentNeighbor]._position);	
+				}				
+			}
+			vec3.scale(weightedNeighbors, weightedNeighbors, NEG_ONE_OVER_TWELVE);
+
+			// Combine weighted contributions:
+			vec3.add(newVertPosition, newVertPosition, weightedNeighbors);
+
+			// Current position:
+			var scaledCurrentVertex = vec3.create();
+			vec3.scale(scaledCurrentVertex, theIrregularVert._position, THREE_OVER_FOUR);
+			vec3.add(newVertPosition, newVertPosition, scaledCurrentVertex);
+		}
+		else if (neighbors.length == 4)	// K = 4:
+		{
+			// S0:
+			vec3.scale(newVertPosition, theRegularVert._position, THREE_OVER_EIGHT);		
+
+			// S2: Find the "center" edge:
+			var toExtraordinary = this._edges[theRegularVert._vertIndex][theIrregularVert._vertIndex];
+
+			var weightedNeighbors = vec3.create();
+			vec3.scale(weightedNeighbors, this.getInverseEdge(toExtraordinary._edgeLeftCCW)._edgeLeftCCW._vertDest._position, NEG_ONE_OVER_EIGHT);
+
+			// Combine weighted contributions:
+			vec3.add(newVertPosition, newVertPosition, weightedNeighbors);
+
+			// Current position:
+			var scaledCurrentVertex = vec3.create();
+			vec3.scale(scaledCurrentVertex, theIrregularVert._position, THREE_OVER_FOUR);
+			vec3.add(newVertPosition, newVertPosition, scaledCurrentVertex);
+		}
+		else if (neighbors.length >= 5) // K > =5:
+		{
+			var K = neighbors.length + 1;
+
+			// S0:
+			var weight = (1.0 / K) * (ONE_OVER_FOUR + 1.0 + ONE_OVER_TWO );
+			var weightedRegularVert = vec3.create();							
+			vec3.scale(weightedRegularVert, theRegularVert._position, weight);
+			vec3.add(newVertPosition, newVertPosition, weightedRegularVert);
+			
+			var totalWeights = 0;
+
+			// S1-(K-1)
+			for (var currentNeighbor = 0; currentNeighbor < neighbors.length; currentNeighbor++)
+			{
+				var j = currentNeighbor + 1;
+
+				var weight = (1.0 / K) * (ONE_OVER_FOUR + ( Math.cos( (j * TWO_PI) / K) ) + (ONE_OVER_TWO * Math.cos( (j * FOUR_PI) / K )) );
+
+				totalWeights += weight;
+
+				// Find the correct neighbor:
+				var toExtraordinary 		= this._edges[theRegularVert._vertIndex][theIrregularVert._vertIndex];
+				var inverseToExtraordinary 	= this.getInverseEdge(toExtraordinary);
+
+				var toNeighbor = this.getInverseEdge(inverseToExtraordinary._edgeLeftCW);
+				for(var currentTurn = 0; currentTurn < currentNeighbor; currentTurn++)
+				{
+					toNeighbor = this.getInverseEdge(toNeighbor._edgeLeftCW);
+				}
+
+				var currentWeightedNeighbor = vec3.create();
+				vec3.scale(currentWeightedNeighbor, toNeighbor._vertDest._position, weight);
+
+				// Combine weighted contributions:
+				vec3.add(newVertPosition, newVertPosition, currentWeightedNeighbor);
+			}
+
+			// Current position:
+			var scaledCurrentVertex = vec3.create();
+			vec3.scale(scaledCurrentVertex, theIrregularVert._position, THREE_OVER_FOUR);
+			vec3.add(newVertPosition, newVertPosition, scaledCurrentVertex);
+		}
+
+		return newVertPosition;
 	}
 
 
