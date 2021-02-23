@@ -12,4 +12,10 @@ The following resources were consulted during the creation of this assignment:
 	- https://people.cs.clemson.edu/~dhouse/courses/405/papers/winged-edge.pdf
 	- https://pages.mtu.edu/~shene/courses/cs3621/notes/model/winged-e.html	
 
+
 All requested features were implemented.
+
+
+This code was developed and tested using the Chrome browser with Windows 10. It also has been verified to work with the Windows Edge browser.
+
+If you have any issues running this code please contact me!
