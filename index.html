@@ -1,5 +1,5 @@
 <!--
-    CMPT 764 Assignment 1
+    CMPT 764 Assignment 2
     by Adam Badke
     SFU Student #301310785
     abadke@sfu.ca
@@ -12,7 +12,7 @@
             <meta charset="utf-8">
             <link rel="stylesheet" href="./style.css" type="text/css">
 
-            <title>CMPT 764 - Assignment 1</title>
+            <title>CMPT 764 - Geometric Modeling in Computer Graphics Assignments</title>
 
             <!-- Shared/global values: -->
             <script type="text/javascript" src="./scripts/shared.js"></script>
@@ -88,6 +88,21 @@
 
 			<div class="buttonGroup">
 				<button onclick="subdivideMesh(document.getElementById('subdivisionType').value, document.getElementById('subdivisionSlider').value)">Subdivide!</button>
+			</div>
+		</div>
+
+		<h3>Mesh Decimation:</h3>
+		<div>
+			<label for="decimationText" id="decimationTextLabel">Number of edges to decimate:</label>
+			<input name="numDecimatedEdgesText" id="decimationText" type="text" value="1">
+
+			<br>
+
+			<label for="kText" id="kTextLabel">Number of random edges to consider per operation (k):</label>
+			<input name="numKText" id="kText" type="text" value="8">
+
+			<div class="buttonGroup">
+				<button onclick="decimateMesh(document.getElementById('decimationText').value, document.getElementById('kText').value)">Decimate!</button>
 			</div>
 		</div>
 

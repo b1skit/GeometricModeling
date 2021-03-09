@@ -12,7 +12,9 @@
 //		https://en.wikipedia.org/wiki/Winged_edge#:~:text=In%20computer%20graphics%2C%20the%20winged,edge%20records%2C%20and%20face%20records.
 // 		https://people.cs.clemson.edu/~dhouse/courses/405/papers/winged-edge.pdf
 //		https://pages.mtu.edu/~shene/COURSES/cs3621/NOTES/model/winged-e.html	
-
+// - Edge decimation papers:
+//		http://mgarland.org/files/papers/quadrics.pdf
+//		http://www.graphics.rwth-aachen.de/media/papers/mcd_vmv021.pdf
 
 
 /*	HTML -> Javascript hooks:
@@ -40,10 +42,26 @@ function subdivideMesh(subdivisionType, numberOfLevels)
 }
 
 
+// Decimation
+function decimateMesh(numEdges, k)
+{
+	if (!isNaN(numEdges) && !isNaN(k))
+	{
+		theSceneManager._scene._renderObject._mesh.decimateMesh(parseInt(numEdges), parseInt(k));
+	}
+	else
+	{
+		alert("[mainProgram][decimateMesh] Invalid input detected: " + numEdges + ", " + k);
+	}
+}
+
+
 function loadOBJ(objURL)
 {
 	// DEBUG: Override URLS
-	// objURL = 'http://www.sfu.ca/~abadke/temp/pyramid.obj';
+	//objURL = 'http://www.sfu.ca/~abadke/temp/pyramid.obj';
+	// objURL = 'http://www.sfu.ca/~abadke/temp/splitPyramid.obj';
+	//objURL = 'http://www.sfu.ca/~abadke/temp/cube10x10.obj';
 	//objURL = 'https://gist.githubusercontent.com/MaikKlein/0b6d6bb58772c13593d0a0add6004c1c/raw/48cf9c6d1cdd43cc6862d7d34a68114e2b93d497/cube.obj';
 	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/horse_s.obj';
 	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/goodhand.obj';

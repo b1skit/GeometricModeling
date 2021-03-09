@@ -161,3 +161,15 @@ class transform
         }
     }
 }
+
+
+// Helper function: Pretty-print a mat4
+function prettyPrintMat4(mat)
+{
+	var str = 	mat[0] + ",\t" + mat[4] + ",\t" + mat[8] +  ",\t" + mat[12] + "\n" + 
+				mat[1] + ",\t" + mat[5] + ",\t" + mat[9] +  ",\t" + mat[13] + "\n" + 
+				mat[2] + ",\t" + mat[6] + ",\t" + mat[10] + ",\t" + mat[14] + "\n" + 
+				mat[3] + ",\t" + mat[7] + ",\t" + mat[11] + ",\t" + mat[15] + "\n";
+	
+	console.log(str);
+}
