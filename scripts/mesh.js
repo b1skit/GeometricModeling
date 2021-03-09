@@ -1,6 +1,6 @@
 // mesh object: Geometry contained by a renderObject
 
-// CMPT 764 Assignment 1
+// CMPT 764 Assignment 1/2
 // by Adam Badke
 // SFU Student #301310785
 // abadke@sfu.ca
@@ -270,6 +270,7 @@ class mesh
 	getInverseEdge(currentEdge)
 	{
 		if (currentEdge == null) console.log("ATTEMPTING TO GET INVERSE OF A NULL EDGE!!!");
+
 		if (this._edges[currentEdge._vertDest._vertIndex][currentEdge._vertOrigin._vertIndex] == null)
 		{
 			console.log("RETRIEVED A NULL EDGE?!?!?! " + currentEdge._vertDest._vertIndex + " -> " + currentEdge._vertOrigin._vertIndex);
@@ -322,6 +323,11 @@ class mesh
 			}
 
 			this._vertexDegreeIsDirty = false;
+		}
+
+		if (vertexIndex >= this._vertexDegree.length)
+		{
+			console.log("[mesh][getVertexDegree] ERROR: Invalid vertex index " + vertexIndex + ": There are only " + this._vertexDegree.length + " vertices!");
 		}
 
 		return this._vertexDegree[vertexIndex];
@@ -793,10 +799,10 @@ class mesh
 
 		selectedIndex 			= Math.min(Math.round(selectedIndex), numEdges - 1);	// Ensure we don't go out of bounds
 		
-		// return this._condensedEdgeList[selectedIndex];
+		return this._condensedEdgeList[selectedIndex];
 
 
-		return this._edges[2][6];	// DEBUG HAX!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		// return this._edges[2][7];	// DEBUG HAX!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		// 2,6 = degree 3
 		// 5,6 = degree 3
 		// 1,0 = degree 3
@@ -812,14 +818,6 @@ class mesh
 	// Decimate the mesh
 	decimateMesh(numEdges, k)
 	{
-		console.log("Decimation starting with " + this.getNumEdges() + " edges");
-
-		this.validateMesh();
-
-		console.log("Initial mesh configuration:");
-		this.printMesh();
-
-
 		if(!this.isInitialized())
 		{
 			alert("[mesh][decimateMesh] Error: You must load a mesh before decimation can be performed");
@@ -840,6 +838,17 @@ class mesh
 			alert("[mesh][decimateMesh] Error: Decimating " + numEdges + " edges would result in an invalid mesh. The current mesh has " + currentEdgeCount + " edges. At most " + maxEdgesRemoved + " edges can be removed.");
 			return;
 		}
+
+
+
+		console.log("Decimation starting with " + this.getNumEdges() + " edges");
+
+		this.validateMesh();
+
+		console.log("Initial mesh configuration:");
+		this.printMesh();
+
+
 
 		// Initialize the error planes for the mesh:
 		this.computeFaceAndVertexQuadrics();	// SHOULD THIS BE PERFORMED AFTER EVERY EDGE IS REMOVED?!?!?!?!?!?!?!?!!?!?!?!?!?!?!?!?
@@ -871,7 +880,7 @@ class mesh
 				var combinedVertQuadrics = mat4.create();
 				mat4.add(combinedVertQuadrics, candidateEdge._vertOrigin._errorQuadric, candidateEdge._vertDest._errorQuadric);
 
-				// // Zero out the bottom row:
+				// Zero out the bottom row:
 				combinedVertQuadrics[3] 	= 0;
 				combinedVertQuadrics[7] 	= 0;
 				combinedVertQuadrics[11] 	= 0;
@@ -880,35 +889,41 @@ class mesh
 				// Invert:
 				var combinedVertQuadricsInv = mat4.invert(combinedVertQuadrics, combinedVertQuadrics);
 
+				var candidateCollapsedPosition = vec4.create();
+
 				// If the matrix is invertible, compute the ideal reprojection location:
 				if (combinedVertQuadricsInv != null)
 				{
-					// Compute the contracted position with minimal error:
-					var candidateCollapsedPosition = vec4.create();
+					// Compute the contracted position with minimal error:					
 					vec4.transformMat4(candidateCollapsedPosition, ZERO_VECTOR, combinedVertQuadrics);
-
-					// Compute the error of the contracted position:
-					var result = vec4.create();
-
-					// Q * v:
-					vec4.transformMat4(result, candidateCollapsedPosition, combinedVertQuadrics);
-
-					// v^T * (Q * v):
-					var candidateError = vec4.dot(candidateCollapsedPosition, result);
-
-					if (candidateError < selectedEdgeError)
-					{
-						selectedEdge 			= candidateEdge;
-						selectedEdgeError 		= candidateError;
-						collapsedVertexPosition = candidateCollapsedPosition;
-					}
-
 				}
 				else
 				{
-					console.log("failure!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+					// Matrix was not invertible: Fallback to the midpoint:
+					candidateCollapsedPosition = vec4.fromValues(
+						candidateEdge._vertOrigin._position[0] + candidateEdge._vertDest._position[0], 
+						candidateEdge._vertOrigin._position[1] + candidateEdge._vertDest._position[1], 
+						candidateEdge._vertOrigin._position[2] + candidateEdge._vertDest._position[2], 
+						2.0	// Will be 1.0 after we apply the scale!
+						);
 
-					// TODO: HANDLE CASES WHERE MATRIX WAS NOT INVERTIBLE!!!!!!!!!!!!!!!
+					vec4.scale(candidateCollapsedPosition, candidateCollapsedPosition, 0.5);
+				}
+
+				// Compute the error of the contracted position:
+				var result = vec4.create();
+
+				// Q * v:
+				vec4.transformMat4(result, candidateCollapsedPosition, combinedVertQuadrics);
+
+				// v^T * (Q * v):
+				var candidateError = vec4.dot(candidateCollapsedPosition, result);
+
+				if (candidateError < selectedEdgeError)
+				{
+					selectedEdge 			= candidateEdge;
+					selectedEdgeError 		= candidateError;
+					collapsedVertexPosition = candidateCollapsedPosition;
 				}
 			}	// End of random selection loop
 
@@ -917,40 +932,64 @@ class mesh
 			// Remove the selected edge:
 			if (selectedEdge != null)
 			{
+
+				console.log("Pre-collapse:");
+
+				// Pre-collapse any neighboring faces that will be invalidated by the current edge collapse:
+				var leftSplittingEdge 	= this.getInverseEdge(selectedEdge._edgeLeftCCW)._edgeLeftCW;
+				var rightSplittingEdge 	= this.getInverseEdge(this.getInverseEdge(selectedEdge)._edgeLeftCCW)._edgeLeftCW;
+
+				// Pre-collapse faces/edges to the left:
+				if(
+					leftSplittingEdge._edgeLeftCW._vertOrigin._vertIndex == selectedEdge._vertDest._vertIndex &&
+					this.getInverseEdge(leftSplittingEdge)._edgeLeftCCW._vertDest._vertIndex == selectedEdge._vertOrigin._vertIndex
+					)
+				{
+					console.log("Found left splitting edge!!!");
+
+					this.decimateDegree3Edge(leftSplittingEdge);
+				}
+
+				// Pre-collapse faces/edges to the right:
+				if (rightSplittingEdge._edgeLeftCCW._vertDest._vertIndex == selectedEdge._vertOrigin._vertIndex &&
+					this.getInverseEdge(rightSplittingEdge)._edgeLeftCW._vertOrigin._vertIndex == selectedEdge._vertDest._vertIndex
+					)
+				{
+					console.log("Found right splitting edge!!!");
+
+					this.decimateDegree3Edge(rightSplittingEdge);
+				}
+				console.log("Pre-collapse complete!!!!!!!!!!!");
+
+
+				if (this._edges[selectedEdge._vertOrigin._vertIndex][selectedEdge._vertDest._vertIndex] != selectedEdge)
+				{
+					console.log("WTFFFFFFFFFFFFFFFFFF");
+				}
+
+
 				var selectedOriginIdx 	= selectedEdge._vertOrigin._vertIndex;	// Vertex to keep
 				var selectedDestIdx 	= selectedEdge._vertDest._vertIndex;	// Vertex to be removed
 
 				var leftCCWVertIdx 		= selectedEdge._edgeLeftCCW._vertDest._vertIndex;
 				var rightCWVertIdx		= this.getInverseEdge(selectedEdge)._edgeLeftCW._vertOrigin._vertIndex;
 
-				var leftCCWPrevVertIdx = this._edges[leftCCWVertIdx][selectedDestIdx]._edgeLeftCW._vertOrigin._vertIndex;
-				var rightCWPrevVertIdx = this._edges[selectedDestIdx][rightCWVertIdx]._edgeLeftCW._vertOrigin._vertIndex;
-
-				var invSelectedEdge 	= this.getInverseEdge(selectedEdge);
-
 				console.log("selectedOriginIdx = " + selectedOriginIdx);
 				console.log("selectedDestIdx = " + selectedDestIdx);
 				console.log("leftCCWVertIdx = " + leftCCWVertIdx);
 				console.log("rightCWVertIdx = " + rightCWVertIdx);
-				console.log("leftCCWPrevVertIdx = " + leftCCWPrevVertIdx);
-				console.log("rightCWPrevVertIdx = " + rightCWPrevVertIdx);
 				console.log("Decimating edge: " + selectedOriginIdx + " -> " + selectedDestIdx);
+
 
 
 				// Update the origin vertex position to match the computed ideal vertex position:
 				selectedEdge._vertOrigin._position 	= vec3.fromValues(collapsedVertexPosition[0], collapsedVertexPosition[1], collapsedVertexPosition[2]);		
-				// selectedEdge._vertDest._position 	= vec3.fromValues(collapsedVertexPosition[0], collapsedVertexPosition[1], collapsedVertexPosition[2]); // DEBUG HACK!!!!!!
 
 				console.log("collapsed position = " + collapsedVertexPosition[0] + ", " + collapsedVertexPosition[1] + " " + collapsedVertexPosition[2]);
 
-				this.printMesh();
-
 
 				var destVertDegree = this.getVertexDegree(selectedDestIdx);
-				console.log("Destination degree = " + destVertDegree);
-
-				// // Get the neighboring vertices:
-				// var vertNeighbors = this.getVertexNeighbors(selectedDestIdx);	// MOVE THIS INSIDE THE BLOCK?!?!?!?!?!?!
+				console.log("Destination (vert idx = " + selectedDestIdx + ") degree = " + destVertDegree);
 
 				// Handle the various degree configurations:
 				if (destVertDegree < 3)
@@ -959,59 +998,7 @@ class mesh
 				}
 				else if (destVertDegree == 3)
 				{
-					// // Get outer CCW edges:
-					// var leftEdge 	= selectedEdge._edgeLeftCW;
-					// var rightEdge 	= this.getInverseEdge(selectedEdge)._edgeLeftCCW;
-					// var backEdge 	= this.getInverseEdge(selectedEdge._edgeLeftCCW)._edgeLeftCW;
-
-					// // Get inner deprecated CCW edges:
-					// var deprecatedLeftEdge 	= selectedEdge._edgeLeftCCW;
-					// var deprecatedRightEdge = this.getInverseEdge(selectedEdge)._edgeLeftCW;
-
-					// // Delete the deprecated inner faces:
-					// this._faces[deprecatedLeftEdge._faceRight._faceIndex] = null;
-					// this._faces[deprecatedRightEdge._faceLeft._faceIndex] = null;
-
-					// // Update pointers around the updated face:
-					// leftEdge._edgeLeftCCW 	= rightEdge;
-					// rightEdge._edgeLeftCCW 	= backEdge;
-					// backEdge._edgeLeftCCW 	= leftEdge;
-
-					// leftEdge._edgeLeftCW 	= backEdge;
-					// backEdge._edgeLeftCW 	= rightEdge;
-					// rightEdge._edgeLeftCW 	= leftEdge;
-
-					// // Update face -> edge pointer:
-					// selectedEdge._faceLeft._edge = leftEdge;
-
-					// // Update face pointers. Keep the selected edge's left face:
-					// leftEdge._faceLeft 	= selectedEdge._faceLeft;
-					// rightEdge._faceLeft = selectedEdge._faceLeft;
-					// backEdge._faceLeft 	= selectedEdge._faceLeft;
-
-					// this.getInverseEdge(leftEdge)._faceRight 	= selectedEdge._faceLeft;
-					// this.getInverseEdge(rightEdge)._faceRight 	= selectedEdge._faceLeft;
-					// this.getInverseEdge(backEdge)._faceRight 	= selectedEdge._faceLeft;
-
-					// // Delete the inner edge primitives:
-					// this._edges[selectedOriginIdx][selectedDestIdx] = null;
-					// this._edges[selectedDestIdx][selectedOriginIdx] = null;
-					// console.log("deleting " + selectedOriginIdx + " <-> " + selectedDestIdx);
-
-					// this._edges[deprecatedLeftEdge._vertOrigin._vertIndex][deprecatedLeftEdge._vertDest._vertIndex] = null;
-					// this._edges[deprecatedLeftEdge._vertDest._vertIndex][deprecatedLeftEdge._vertOrigin._vertIndex] = null;
-					// console.log("deleting " + deprecatedLeftEdge._vertOrigin._vertIndex + " <-> " + deprecatedLeftEdge._vertDest._vertIndex);
-
-					// this._edges[deprecatedRightEdge._vertOrigin._vertIndex][deprecatedRightEdge._vertDest._vertIndex] = null;
-					// this._edges[deprecatedRightEdge._vertDest._vertIndex][deprecatedRightEdge._vertOrigin._vertIndex] = null;
-					// console.log("deleting " + deprecatedRightEdge._vertOrigin._vertIndex + " <-> " + deprecatedRightEdge._vertDest._vertIndex);
-
-					// // Finally, delete the inner vertex:
-					// this._vertices[selectedDestIdx] = null;
-					// console.log("Deleted vertex " + selectedDestIdx);
-
 					this.decimateDegree3Edge(selectedEdge);
-
 				}
 				else if (destVertDegree == 4)
 				{
@@ -1095,10 +1082,6 @@ class mesh
 
 					this._edges[deprecatedRightEdge._vertOrigin._vertIndex][deprecatedRightEdge._vertDest._vertIndex] = null;
 					this._edges[deprecatedRightEdge._vertDest._vertIndex][deprecatedRightEdge._vertOrigin._vertIndex] = null;
-					
-					// Finally, delete the inner vertex:
-					this._vertices[selectedDestIdx] = null;
-					console.log("Deleted vertex " + selectedDestIdx);
 				}
 				else if(destVertDegree == 5)
 				{
@@ -1207,40 +1190,16 @@ class mesh
 					
 					this._edges[botRightDeprecatedEdge._vertOrigin._vertIndex][botRightDeprecatedEdge._vertDest._vertIndex] = null;
 					this._edges[botRightDeprecatedEdge._vertDest._vertIndex][botRightDeprecatedEdge._vertOrigin._vertIndex] = null;
-
-
-					// Finally, delete the inner vertex:
-					this._vertices[selectedDestIdx] = null;
-					console.log("Deleted vertex " + selectedDestIdx);
-
 				}
 				else if (destVertDegree >= 6)
 				{
 					console.log("HANDLING DEGREE >=6 VERT");
 
-
-					// Pre-collapse any neighboring faces:
-					var leftSplittingEdge 	= this.getInverseEdge(selectedEdge._edgeLeftCCW)._edgeLeftCW;
-					var rightSplittingEdge 	= this.getInverseEdge(this.getInverseEdge(selectedEdge)._edgeLeftCCW)._edgeLeftCW;
-
-					// Pre-collapse faces/edges to the left:
-					if(
-						leftSplittingEdge._edgeLeftCW._vertOrigin._vertIndex == selectedDestIdx &&
-						this.getInverseEdge(leftSplittingEdge)._edgeLeftCCW._vertDest._vertIndex == selectedOriginIdx
-						)
-					{
-						console.log("Found left splitting edge!!!");
-					}
-
-					// Pre-collapse faces/edges to the right:
-					if (rightSplittingEdge._edgeLeftCCW._vertDest._vertIndex == selectedOriginIdx &&
-						this.getInverseEdge(rightSplittingEdge)._edgeLeftCW._vertOrigin._vertIndex == selectedDestIdx
-						)
-					{
-						console.log("Found right splitting edge!!!");
-
-
-					}
+					// ISSUE: WE'RE NOT UPDATING AN ORIGIN VERTEX SOMEWHERE...
+					// rightCWVertIdx
+					// rightEdge: Either a dest incorrectly updated, or a origin not updated
+					// -> One of the origin verts still references the deleted vert
+					// -> Edge loop pointers seem to be ok... But the origin vert doesn't match
 
 					// Get the neighboring vertices:
 					var vertNeighbors = this.getVertexNeighbors(selectedDestIdx);
@@ -1256,6 +1215,13 @@ class mesh
 
 					var botLeftEdge 	= selectedEdge._edgeLeftCW;
 					var botRightEdge	= this.getInverseEdge(selectedEdge)._edgeLeftCCW;
+
+					this.printEdgeLoop(leftDeprecatedEdge, "leftDeprecatedEdge");
+					this.printEdgeLoop(rightDeprecatedEdge, "rightDeprecatedEdge");
+					this.printEdgeLoop(leftEdge, "leftEdge");
+					this.printEdgeLoop(rightEdge, "rightEdge");
+					this.printEdgeLoop(botLeftEdge, "botLeftEdge");
+					this.printEdgeLoop(botRightEdge, "botRightEdge");
 
 					// Update the edge verts:
 					for (var currentVert = 0; currentVert < vertNeighbors.length; currentVert++)
@@ -1274,8 +1240,10 @@ class mesh
 								this._edges[invCurrentEdge._vertOrigin._vertIndex][selectedEdge._vertOrigin._vertIndex] != null
 								)
 							{
-								console.log("FOUND EXISTING EDGE IN TABLE: " + selectedEdge._vertOrigin._vertIndex + ", " + currentEdge._vertDest._vertIndex);
+								console.log("FOUND EXISTING EDGE IN TABLE: " + selectedEdge._vertOrigin._vertIndex + ", " + currentEdge._vertDest._vertIndex + " NEED TO DECIDE HOW TO HANDLE THIS!!!!!!!!!!!!!!!!");
 								continue;
+
+								// TODO: DO I NEED THIS ANYMORE? IS CONTINUING THE RIGHT MOVE HERE IF I DO??????????
 							}
 
 							// Remove the existing edges from the table:
@@ -1342,40 +1310,32 @@ class mesh
 					this._edges[rightDeprecatedEdge._vertDest._vertIndex][rightDeprecatedEdge._vertOrigin._vertIndex] = null;
 					
 
+				}
 
+
+				// Cleanup:
+				if (destVertDegree != 3)	// If the dest degree is 3, we've already done this
+				{
 					// Finally, delete the inner vertex:
 					this._vertices[selectedDestIdx] = null;
 					console.log("Deleted vertex " + selectedDestIdx);
-				}
 
-				
-				// Already handled...................
-				if (destVertDegree != 3)
-				{
 					this.removeEmptyPrimitives();
 				}
 				
 
 
-				this.printVerts();
-
-
 				// TODO: RECOMPUTE FACE NORMALS
+				// newFace.computeFaceNormal(false);
+				// this.computeSmoothNormals();
 
-				// Mark the edges and vertex trackers as dirty:
-				this._numEdgesIsDirty 		= true;
-				this._vertexDegreeIsDirty 	= true;
-				//TODO: IS THERE A MORE EFFICIENT WAY OF HANDLING THIS?!!?!?!?!?
+				
+				// TODO: Do I need to delete selectedEdge!?!?!?!?!!?!?!??!?!
+
 
 				this.printMesh();
-				this.printVerts();
-
-
 				console.log("Edge removal complete");
-
 				this.validateMesh();
-
-
 			}
 			else
 			{
@@ -1388,7 +1348,7 @@ class mesh
 
 
 
-		this._numEdgesIsDirty 		= true;	// TEMP HAX: THIS SHOULDN'T BE NECESSARY
+		this._numEdgesIsDirty 		= true;	// TEMP HAX: THIS SHOULDN'T BE NECESSARY??????
 		this._vertexDegreeIsDirty 	= true;
 
 		console.log("[mesh][decimateMesh] Decimation complete! New mesh has " + this.getNumEdges() + " edges, vert array size = " + this._vertices.length); // TODO: OUTPUT FULL STATS?!?!?!?
@@ -1520,6 +1480,9 @@ class mesh
 			}
 		}
 		this._edges 	= newEdges;
+
+		this._numEdgesIsDirty 		= true;
+		this._vertexDegreeIsDirty 	= true;
 	}
 
 
@@ -1546,6 +1509,20 @@ class mesh
 			
 			console.log(faceStr);
 		}
+	}
+
+
+	printEdgeLoop(edge, name = "")
+	{
+		var str = name + ": ";
+		var cur = edge;
+		do
+		{
+			str += "(" + cur._vertOrigin._vertIndex + ", " + cur._vertDest._vertIndex + ") -> ";
+			cur = cur._edgeLeftCCW;
+		} while (cur != edge);
+
+		console.log(str);
 	}
 
 
@@ -2097,6 +2074,9 @@ class mesh
 		this._faces 	= newFaces;
 		this._edges 	= newEdges;
 		this._vertices 	= newVerts;
+
+		this._vertexDegreeIsDirty 	= true;		// Mark the vertex degree count as dirty to ensure we recalculate the degrees
+		this._numEdgesIsDirty 		= true;		// Mark the edges table as dirty
 
 		// Compute smooth normals:
 		this.computeSmoothNormals();
