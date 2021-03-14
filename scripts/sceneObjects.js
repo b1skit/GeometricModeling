@@ -61,10 +61,8 @@ class sceneManager
         gl.enable(gl.DEPTH_TEST);
         gl.depthFunc(gl.LEQUAL);
 
-
-        gl.enable(gl.CULL_FACE); // Default winding order is CCW
-        gl.cullFace(gl.BACK);   // Default culling mode is gl.BACK
-		
+        // gl.enable(gl.CULL_FACE); // Default winding order is CCW
+        // gl.cullFace(gl.BACK);   // Default culling mode is gl.BACK	
 
         // Clear the canvas:
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);

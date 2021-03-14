@@ -94,12 +94,12 @@
 		<h3>Mesh Decimation:</h3>
 		<div>
 			<label for="decimationText" id="decimationTextLabel">Number of edges to decimate:</label>
-			<input name="numDecimatedEdgesText" id="decimationText" type="text" value="1">
+			<input name="numDecimatedEdgesText" id="decimationText" type="text" value="100">
 
 			<br>
 
 			<label for="kText" id="kTextLabel">Number of random edges to consider per operation (k):</label>
-			<input name="numKText" id="kText" type="text" value="1">
+			<input name="numKText" id="kText" type="text" value="10">
 
 			<div class="buttonGroup">
 				<button onclick="decimateMesh(document.getElementById('decimationText').value, document.getElementById('kText').value)">Decimate!</button>

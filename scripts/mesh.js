@@ -8,8 +8,8 @@
 
 // Mesh debugging:
 'use strict';
-var DEBUG_ENABLED 		= true;
-var DEBUG_SPECIFY_EDGES = true;
+var DEBUG_ENABLED 		= false;
+var DEBUG_SPECIFY_EDGES = false;
 var debugEdgeIndex = 0;
 var debugEdgeVerts = 
 [
@@ -817,6 +817,11 @@ class mesh
 		}
 		else
 		{
+			// TODO: Maybe I can rebuild ONCE after decimation, and walk the list here to find the first valid edge... Probably faster?
+			
+			// TODO: This is biased!!! The condensed edge list disproportionally contains edges with 0 as an origin vertex!!!!!!!
+			// -> Rewrite this to just brute-force select an edge from ALL edges (bidirectional)
+
 			return this._condensedEdgeList[selectedIndex];
 		}		
 	}
@@ -1003,6 +1008,32 @@ class mesh
 						break;
 					}
 				}
+
+
+				// Detect edges that cross over, and would cause an invalid fins/non-manifold geometry. At most, the selectedEdge origin/dest vertices should be shared by 2 faces
+				var numSharedFaces = 0;
+				for (var currentVert = 0; currentVert < this._edges[0].length; currentVert++)
+				{
+					if (this._edges[selectedEdge._vertOrigin._vertIndex][currentVert] != null && this._edges[selectedEdge._vertDest._vertIndex][currentVert] != null)
+					{
+						numSharedFaces++;
+
+						if (numSharedFaces > 2)
+						{
+							break;
+						}
+					}
+				}
+				if (DEBUG_ENABLED)
+				{
+					console.log("Found " + numSharedFaces + " shared faces");
+				}
+
+				if (numSharedFaces > 2)
+				{
+					continue;
+				}
+
 
 				// Find the degree of the deprecated vertex:
 				var destVertDegree = this.getVertexDegree( selectedEdge._vertDest._vertIndex);
@@ -1567,10 +1598,10 @@ class mesh
 				this._vertices[currentVert]._vertIndex = newVerts.length;
 				newVerts.push(this._vertices[currentVert]);
 
-				if (DEBUG_ENABLED)
-				{
-					console.log("Remapped vertex [" + currentVert + "] -> [" + this._vertices[currentVert]._vertIndex + "]");
-				}
+				// if (DEBUG_ENABLED)
+				// {
+				// 	console.log("Remapped vertex [" + currentVert + "] -> [" + this._vertices[currentVert]._vertIndex + "]");
+				// }
 			}					
 		}
 		this._vertices 	= newVerts;
@@ -1600,7 +1631,7 @@ class mesh
 							console.log("ERROR: newEdges already has an edge at [" + this._edges[row][col]._vertOrigin._vertIndex + "][" + this._edges[row][col]._vertDest._vertIndex + "]");
 						}
 
-						console.log("Remapped edge (" + row + ", " + col + ") -> (" + this._edges[row][col]._vertOrigin._vertIndex + ", " + this._edges[row][col]._vertDest._vertIndex + ")");
+						// console.log("Remapped edge (" + row + ", " + col + ") -> (" + this._edges[row][col]._vertOrigin._vertIndex + ", " + this._edges[row][col]._vertDest._vertIndex + ")");
 					}				
 
 					newEdges[ this._edges[row][col]._vertOrigin._vertIndex ][ this._edges[row][col]._vertDest._vertIndex ] = this._edges[row][col];
