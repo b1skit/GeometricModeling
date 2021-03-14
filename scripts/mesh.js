@@ -7,7 +7,7 @@
 
 
 // Mesh debugging:
-'use strict';
+// 'use strict';
 var DEBUG_ENABLED 		= false;
 var DEBUG_SPECIFY_EDGES = false;
 var debugEdgeIndex = 0;
@@ -244,7 +244,8 @@ class mesh
 	_vertexDegreeIsDirty 	= true;
 
 	_numEdgesIsDirty 	= true;
-	_condensedEdgeList 	= null;	// Condensed list of edges. Computed during getNum1WayEdges() call if the current edge list is dirty
+	_numEdges 			= -1;
+	_condensedEdgeList 	= null;				// Condensed list of edges. Computed during getStratifiedEdges() call
 
 	_errorQuadricsAreComputed = false;
 
@@ -260,16 +261,14 @@ class mesh
 	{
 		if (this._numEdgesIsDirty)
 		{
-			// Condense the 2D edges table to a list for faster edge selection during decimation:
-			this._condensedEdgeList = [];
-
+			this._numEdges = 0; 
 			for(var currentStartVert = 0; currentStartVert < this._edges[0].length; currentStartVert++)
 			{
 				for (var currentEndVert = (currentStartVert + 1); currentEndVert < this._edges[0].length; currentEndVert++)
 				{
 					if (this._edges[currentStartVert][currentEndVert] != null)
 					{
-						this._condensedEdgeList.push(this._edges[currentStartVert][currentEndVert]);
+						this._numEdges++;
 					}
 				}
 			}
@@ -277,7 +276,7 @@ class mesh
 			this._numEdgesIsDirty  = false;
 		}
 
-		return this._condensedEdgeList.length;
+		return this._numEdges;
 	}
 
 
@@ -797,10 +796,27 @@ class mesh
 	}
 
 
-	// Retrieve an edge (stratified) from the _condensedEdgeList array
+	// Get a random (stratified) edge
 	getStratifiedEdge(currentCandidate, numCandidates)
 	{
-		var numEdges 			= this.getNum1WayEdges();	// Also allocates this._condensedEdgeList, if required
+		// Build a list of all edges the first time this function is called:
+		if (currentCandidate == 0)
+		{
+			this._condensedEdgeList = [];
+
+			for (var row = 0; row < this._edges[0].length; row++)
+			{
+				for (var col = 0; col < this._edges[0].length; col++)
+				{
+					if (this._edges[row][col] != null)
+					{
+						this._condensedEdgeList.push(this._edges[row][col]);
+					}
+				}
+			}
+		}
+
+		var numEdges 			= this._condensedEdgeList.length;
 
 		var stratumWidth 		= numEdges / numCandidates;	// 1.0/numCandidates * numEdges
 
@@ -809,7 +825,22 @@ class mesh
 		var selectedIndex 		= stratumStartIndex + (Math.random() * stratumWidth);	// random returns values in [0, 1)
 
 		selectedIndex 			= Math.min(Math.round(selectedIndex), numEdges - 1);	// Ensure we don't go out of bounds
+
+		var searchedEdges = 0;
+		while (this._condensedEdgeList[selectedIndex] == null)
+		{
+			selectedIndex = (selectedIndex + 1) % this._condensedEdgeList.length;	// Wrap the index around
+
+			searchedEdges++;
+			if (searchedEdges > this._condensedEdgeList.length)
+			{
+				console.log("[mesh][getStratifiedEdge]ERROR: Condensed edge list is empty, cannot retrieve a random edge!");
+				break;
+			}
+		}
 		
+		var selectedEdge 						= this._condensedEdgeList[selectedIndex];
+		this._condensedEdgeList[selectedIndex] 	= null; // Remove the edge from the list
 
 		if (DEBUG_ENABLED && DEBUG_SPECIFY_EDGES)
 		{
@@ -817,12 +848,7 @@ class mesh
 		}
 		else
 		{
-			// TODO: Maybe I can rebuild ONCE after decimation, and walk the list here to find the first valid edge... Probably faster?
-			
-			// TODO: This is biased!!! The condensed edge list disproportionally contains edges with 0 as an origin vertex!!!!!!!
-			// -> Rewrite this to just brute-force select an edge from ALL edges (bidirectional)
-
-			return this._condensedEdgeList[selectedIndex];
+			return selectedEdge;
 		}		
 	}
 
@@ -851,7 +877,7 @@ class mesh
 
 		if (DEBUG_ENABLED)
 		{
-			console.log("[mesh][decimateMesh] Decimation starting with " + this.getNum1WayEdges() + " edges");
+			console.log("[mesh][decimateMesh] Decimation starting with " + currentEdgeCount + " edges");
 			this.validateMesh();
 
 			if (DEBUG_SPECIFY_EDGES)
@@ -864,17 +890,14 @@ class mesh
 		// Initialize the error planes for the mesh:
 		this.computeFaceAndVertexQuadrics();	// Note: This only actually computes once at the beginning
 
-		const ZERO_VECTOR = vec4.fromValues(0,0,0,1);
-
 		var DEBUG_EDGE_SEQUENCE = "";	// DEBUG: Keep a track of the edge sequence so we can reconstruct it
 		
 		// Loop once for each edge to be removed:
 		for (var currentEdgeNum = 0; currentEdgeNum < numEdges; currentEdgeNum++)
 		{
-			currentEdgeCount = this.getNum1WayEdges();
 			if (currentEdgeCount <= 6)
 			{
-				console.log("ERROR: There are only " + currentEdgeCount + " edges in the mesh. Aborting decimation");
+				console.log("[mesh][decimateMesh] WARNING: There are only " + currentEdgeCount + " edges in the mesh. Aborting decimation");
 				break;
 			}
 
@@ -900,6 +923,12 @@ class mesh
 				// Select a stratified edge for consideration:
 				var candidateEdge = this.getStratifiedEdge(currentCandidate, k);
 
+				if(candidateEdge == null)
+				{
+					console.log("[mesh][decimateMesh] Error: Received a null candidate edge... Aborting decimation");
+					break;
+				}
+
 				// Compute the optimized location for an edge collapse:
 				var combinedVertQuadrics = mat4.create();
 				mat4.add(combinedVertQuadrics, candidateEdge._vertOrigin._errorQuadric, candidateEdge._vertDest._errorQuadric);
@@ -908,18 +937,18 @@ class mesh
 				combinedVertQuadrics[3] 	= 0;
 				combinedVertQuadrics[7] 	= 0;
 				combinedVertQuadrics[11] 	= 0;
-				combinedVertQuadrics[15] 	= 1; // TODO: I think we can replace this with mat3/vec3 multiplication?
+				combinedVertQuadrics[15] 	= 1;
 				
 				// Invert:
 				var combinedVertQuadricsInv 	= mat4.invert(combinedVertQuadrics, combinedVertQuadrics);
 
-				var candidateCollapsedPosition 	= vec4.create();
+				var candidateCollapsedPosition;
 
 				// If the matrix is invertible, compute the ideal reprojection location:
 				if (combinedVertQuadricsInv != null)
 				{
-					// Compute the contracted position with minimal error:					
-					vec4.transformMat4(candidateCollapsedPosition, ZERO_VECTOR, combinedVertQuadricsInv);
+					// Compute the contracted position with minimal error: (Q1 + Q2)(^-1) * [0,0,0,1]
+					candidateCollapsedPosition = vec4.fromValues(combinedVertQuadricsInv[12], combinedVertQuadricsInv[13], combinedVertQuadricsInv[14], combinedVertQuadricsInv[15] );
 				}
 				else
 				{
@@ -978,9 +1007,12 @@ class mesh
 						console.log("Found left splitting edge!!!");
 					}					
 
-					this.decimateDegree3Edge(leftSplittingEdge);
+					// Pre-update the error quadric at the surviving vertex:
+					mat4.add(leftSplittingEdge._vertOrigin._errorQuadric, leftSplittingEdge._vertOrigin._errorQuadric, leftSplittingEdge._vertDest._errorQuadric);
 
-					currentEdgeCount = this.getNum1WayEdges();
+					this.decimateDegree3Edge(leftSplittingEdge);
+					currentEdgeCount -= 3;
+
 					if (currentEdgeCount <= 6)
 					{
 						console.log("ERROR: There are only " + currentEdgeCount + " edges in the mesh. Aborting decimation");
@@ -996,11 +1028,14 @@ class mesh
 					if (DEBUG_ENABLED)
 					{
 						console.log("Found right splitting edge!!!");
-					}					
+					}
+					
+					// Pre-update the error quadric at the surviving vertex:
+					mat4.add(rightSplittingEdge._vertOrigin._errorQuadric, rightSplittingEdge._vertOrigin._errorQuadric, rightSplittingEdge._vertDest._errorQuadric);
 
 					this.decimateDegree3Edge(rightSplittingEdge);
+					currentEdgeCount -= 3;
 
-					currentEdgeCount = this.getNum1WayEdges();
 					if (currentEdgeCount <= 6)
 					{
 						console.log("ERROR: There are only " + currentEdgeCount + " edges in the mesh. Aborting decimation");
@@ -1056,6 +1091,7 @@ class mesh
 				else if (destVertDegree == 3)
 				{
 					this.decimateDegree3Edge(selectedEdge);
+					currentEdgeCount -= 3;
 				}
 				else if (destVertDegree == 4)
 				{
@@ -1160,6 +1196,8 @@ class mesh
 
 					this._edges[deprecatedRightEdge._vertOrigin._vertIndex][deprecatedRightEdge._vertDest._vertIndex] = null;
 					this._edges[deprecatedRightEdge._vertDest._vertIndex][deprecatedRightEdge._vertOrigin._vertIndex] = null;
+
+					currentEdgeCount -= 2;	// Decrement by the number of 1-way edges removed
 				}
 				else if(destVertDegree == 5)
 				{
@@ -1240,7 +1278,7 @@ class mesh
 					rightInnerEdge._vertDest 		= selectedEdge._vertOrigin;
 					invRightInnerEdge._vertOrigin 	= selectedEdge._vertOrigin;
 
-					// Insert into the edge table:
+					// Reinsert into the edge table:
 					this._edges[leftInnerEdge._vertOrigin._vertIndex][leftInnerEdge._vertDest._vertIndex] 			= leftInnerEdge;
 					this._edges[invLeftInnerEdge._vertOrigin._vertIndex][invLeftInnerEdge._vertDest._vertIndex] 	= invLeftInnerEdge;
 
@@ -1305,6 +1343,8 @@ class mesh
 					
 					this._edges[botRightDeprecatedEdge._vertOrigin._vertIndex][botRightDeprecatedEdge._vertDest._vertIndex] = null;
 					this._edges[botRightDeprecatedEdge._vertDest._vertIndex][botRightDeprecatedEdge._vertOrigin._vertIndex] = null;
+
+					currentEdgeCount -= 2;	// Decrement by the number of 1-way edges removed
 				}
 				else if (destVertDegree >= 6)
 				{
@@ -1362,12 +1402,10 @@ class mesh
 								this._edges[invCurrentEdge._vertOrigin._vertIndex][selectedEdge._vertOrigin._vertIndex] != null		// Neighbor vert -> selectedEdge's origin
 								)
 							{
-								if (DEBUG_ENABLED)
-								{
-									console.log("ERROR: Found an existing edge in the table: " + selectedEdge._vertOrigin._vertIndex + ", " + currentEdge._vertDest._vertIndex);
-								}
+								// NOTE: This is a safety check for a bug that no longer occurs. Leaving it here as a precaution only.
+								console.log("ERROR: Found an existing edge in the table: " + selectedEdge._vertOrigin._vertIndex + ", " + currentEdge._vertDest._vertIndex);
 
-								// Attempt to reconnect the edge flow:
+								// Hail mary: Attempt to reconnect the edge flow:
 								var existingForwardEdge = this._edges[selectedEdge._vertOrigin._vertIndex][currentEdge._vertDest._vertIndex];
 								var existingInverseEdge = this._edges[invCurrentEdge._vertOrigin._vertIndex][selectedEdge._vertOrigin._vertIndex];
 
@@ -1434,8 +1472,12 @@ class mesh
 
 					this._edges[rightDeprecatedEdge._vertOrigin._vertIndex][rightDeprecatedEdge._vertDest._vertIndex] = null;
 					this._edges[rightDeprecatedEdge._vertDest._vertIndex][rightDeprecatedEdge._vertOrigin._vertIndex] = null;
+
+					currentEdgeCount -= 2;	// Decrement by the number of 1-way edges removed
 				}
 
+				// Update the error quadric at the surviving vertex:
+				mat4.add(selectedEdge._vertOrigin._errorQuadric, selectedEdge._vertOrigin._errorQuadric, selectedEdge._vertDest._errorQuadric);
 
 				// Cleanup:
 				if (destVertDegree != 3)	// If the dest degree is 3, we've already done this
@@ -1444,12 +1486,10 @@ class mesh
 					selectedEdge._faceLeft.computeFaceNormal(false);
 					selectedEdge._faceRight.computeFaceNormal(false);
 
-					// Update the error quadric at the surviving vertex:
-					mat4.add(selectedEdge._vertOrigin._errorQuadric, selectedEdge._vertOrigin._errorQuadric, selectedEdge._vertDest._errorQuadric);
-
 					// Delete the selected edge:
 					this._edges[selectedEdge._vertOrigin._vertIndex][selectedEdge._vertDest._vertIndex] = null;
-					this._edges[selectedEdge._vertDest._vertIndex][selectedEdge._vertOrigin._vertIndex] = null;				
+					this._edges[selectedEdge._vertDest._vertIndex][selectedEdge._vertOrigin._vertIndex] = null;		
+					currentEdgeCount -= 1;	// Decrement by the number of 1-way edges removed
 
 					// Finally, delete the inner vertex:
 					this._vertices[selectedEdge._vertDest._vertIndex] = null;
@@ -1990,7 +2030,7 @@ class mesh
 				newEdge._faceLeft 					= newFace;
 				currentEdge._children[0]._faceLeft 	= newFace;
 
-				inverseNewEdge._faceRight = newFace; // TODO: Is this correct?
+				inverseNewEdge._faceRight = newFace;
 
 				// Update the inverse edge face pointers
 				newEdges[currentEdge._vertOrigin._vertIndex][prevNewVert._vertIndex]._faceRight = newFace;
@@ -2424,10 +2464,7 @@ class mesh
 
     // Bind a mesh for rendering:
     bindBuffers(gl, wireframeMode = false)
-    {
-		// TODO: Cleanup the various ways wireframe mode is configured here!
-
-		
+    {		
         // Configure the vertex buffers:
 		if (wireframeMode == true)
 		{
@@ -2466,17 +2503,6 @@ class mesh
 			}
 		}
 
-        gl.vertexAttribPointer(
-            gl.getAttribLocation(this._material._shader._shaderProgram, 'in_normal'),
-            3,          // Number of components: # values per iteration
-            gl.FLOAT,   // Type
-            false,      // Normalize the data?
-            0,          // Stride
-            0           // Starting offset
-        );
-        gl.enableVertexAttribArray(gl.getAttribLocation(this._material._shader._shaderProgram, 'in_normal'));
-
-        // Color buffers:
 		if (wireframeMode == true)
 		{
 			gl.bindBuffer(gl.ARRAY_BUFFER, this._colorBuffer);
@@ -2492,23 +2518,17 @@ class mesh
 		}
 		else
 		{
-			gl.bindBuffer(gl.ARRAY_BUFFER, this._colorBuffer);
 			gl.vertexAttribPointer(
-				gl.getAttribLocation(this._material._shader._shaderProgram, 'in_vertexColor'),
-				4,          // Number of components: # values per iteration
+				gl.getAttribLocation(this._material._shader._shaderProgram, 'in_normal'),
+				3,          // Number of components: # values per iteration
 				gl.FLOAT,   // Type
 				false,      // Normalize the data?
 				0,          // Stride
 				0           // Starting offset
 			);
-			gl.enableVertexAttribArray(gl.getAttribLocation(this._material._shader._shaderProgram, 'in_vertexColor'));
+			gl.enableVertexAttribArray(gl.getAttribLocation(this._material._shader._shaderProgram, 'in_normal'));
 		}
-        
-
     }
-
-
-
 
 
 	// DEBUG: Sanity check the mesh

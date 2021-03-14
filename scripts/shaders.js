@@ -16,7 +16,6 @@
 const vsSource_Phong = `
 attribute vec4 in_position;
 attribute vec3 in_normal;
-attribute vec4 in_vertexColor;
 
 uniform mat4 in_M;
 uniform mat4 in_MV;
@@ -33,7 +32,6 @@ void main()
 	// Output fragment varyings:
 	fragPosW    = in_M * in_position;
 	fragNormal  = normalize((in_M * vec4(in_normal.xyz, 0.0)).xyz);	// NOTE: We must normalize incase there was scaling in the matrix
-	fragColor   = in_vertexColor; 
 
 	// Output vertex position:
 	gl_Position = in_P * in_MV * in_position;
@@ -97,7 +95,6 @@ void main()
 // VERTEX SHADER:
 const vsSource_Wireframe = `
 attribute vec4 in_position;
-attribute vec3 in_normal;
 attribute vec4 in_vertexColor;
 
 uniform mat4 in_M;
@@ -108,7 +105,6 @@ uniform mat4 in_P;
 // NOTE: If these aren't used in the shader and you try and upload values, WebGL will complain
 varying vec4 fragPosW;
 varying vec4 fragColor;
-varying vec3 fragNormal;
 
 void main()
 {
@@ -134,7 +130,6 @@ uniform vec3 in_color; 			// A single color
 // Vertex->Fragment inputs:
 varying vec4 fragPosW;
 varying vec4 fragColor;
-varying vec3 fragNormal;
 
 void main()
 {
