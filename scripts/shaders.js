@@ -49,7 +49,6 @@ precision highp float;
 // Uniforms:
 uniform vec3 in_cameraPosW;
 uniform vec3 in_color; 			// A single color
-uniform int in_isWireframe;		// Boolean
 
 // Vertex->Fragment inputs:
 varying vec4 fragPosW;
@@ -84,6 +83,61 @@ void main()
 	// Tonemap to [0,1]:
 	shadedColor = shadedColor / (vec3(1) + shadedColor);
 
-	gl_FragColor = vec4(in_isWireframe ==  0 ? shadedColor : in_color, 1.0);
+	gl_FragColor = vec4(shadedColor, 1.0);
+}
+`;
+
+
+
+
+
+/*	WIREFRAME SHADER
+*	Uses color buffer to colorize individual edges
+*/
+// VERTEX SHADER:
+const vsSource_Wireframe = `
+attribute vec4 in_position;
+attribute vec3 in_normal;
+attribute vec4 in_vertexColor;
+
+uniform mat4 in_M;
+uniform mat4 in_MV;
+uniform mat4 in_P;
+
+// Outputs:
+// NOTE: If these aren't used in the shader and you try and upload values, WebGL will complain
+varying vec4 fragPosW;
+varying vec4 fragColor;
+varying vec3 fragNormal;
+
+void main()
+{
+	// Output fragment varyings:
+	fragPosW    = in_M * in_position;
+	fragColor   = in_vertexColor; 
+
+	// Output vertex position:
+	gl_Position = in_P * in_MV * in_position;
+}
+`;
+
+
+// FRAGMENT SHADER:
+const fsSource_Wireframe = `
+// Specify the "default" precision for the shader:
+precision highp float;
+
+// Uniforms:
+uniform vec3 in_cameraPosW;
+uniform vec3 in_color; 			// A single color
+
+// Vertex->Fragment inputs:
+varying vec4 fragPosW;
+varying vec4 fragColor;
+varying vec3 fragNormal;
+
+void main()
+{
+	gl_FragColor = fragColor;
 }
 `;

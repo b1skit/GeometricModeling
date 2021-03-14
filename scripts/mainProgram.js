@@ -17,6 +17,12 @@
 //		http://www.graphics.rwth-aachen.de/media/papers/mcd_vmv021.pdf
 
 
+
+// TODO: 
+// - COMMENT OUT SUBDIVISION CODE FOR SUBMISSION!!!!!!!
+// - SET REASONABLE DEFAULTS FOR ALL OF THE HTML CONTROLS!!!!!!!!
+
+
 /*	HTML -> Javascript hooks:
 *
 */
@@ -61,15 +67,16 @@ function loadOBJ(objURL)
 	// DEBUG: Override URLS
 	//objURL = 'http://www.sfu.ca/~abadke/temp/pyramid.obj';
 	// objURL = 'http://www.sfu.ca/~abadke/temp/splitPyramid.obj';
-	//objURL = 'http://www.sfu.ca/~abadke/temp/cube10x10.obj';
+	// objURL = 'http://www.sfu.ca/~abadke/temp/cube4x4.obj';
+	// objURL = 'http://www.sfu.ca/~abadke/temp/cubeDegree5Faces.obj';
 	//objURL = 'https://gist.githubusercontent.com/MaikKlein/0b6d6bb58772c13593d0a0add6004c1c/raw/48cf9c6d1cdd43cc6862d7d34a68114e2b93d497/cube.obj';
 	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/horse_s.obj';
-	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/goodhand.obj';
-	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/venus.obj';
-	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/wheel.obj';
+	// objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/goodhand.obj';
+	// objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/venus.obj';
+	// objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/wheel.obj';
 	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/walking_monster.obj';
 	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/horse.obj';
-	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/subdivision/chess_piece.obj';
+	// objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/subdivision/chess_piece.obj';
 	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/subdivision/small_horse.obj';
 	
 	// Create a new render object and add it to the scene:

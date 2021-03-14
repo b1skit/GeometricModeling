@@ -77,10 +77,11 @@ class renderObject
 */
 class material
 {
-	_shader = null;
+	_shader 			= null;
+	_wireframeShader	= null;
 
-	_color 			= null;
-	_wireframeColor = null;
+	_color 				= null;
+	_wireframeColor 	= null;
 
     constructor()
     {
@@ -89,6 +90,9 @@ class material
 
 		this._shader = new shader();
 		this._shader.initialize(vsSource_Phong, fsSource_Phong);
+
+		this._wireframeShader = new shader();
+		this._wireframeShader.initialize(vsSource_Wireframe, fsSource_Wireframe);
     }
 }
 

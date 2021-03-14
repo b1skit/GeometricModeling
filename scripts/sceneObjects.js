@@ -61,8 +61,10 @@ class sceneManager
         gl.enable(gl.DEPTH_TEST);
         gl.depthFunc(gl.LEQUAL);
 
-        // gl.enable(gl.CULL_FACE); // Default winding order is CCW
-        // gl.cullFace(gl.BACK);   // Default culling mode is gl.BACK
+
+        gl.enable(gl.CULL_FACE); // Default winding order is CCW
+        gl.cullFace(gl.BACK);   // Default culling mode is gl.BACK
+		
 
         // Clear the canvas:
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -93,11 +95,11 @@ class sceneManager
 			{
 				this._scene._renderObject._mesh.bindBuffers(gl, true);
 
-				// Upload the wireframe color:
-				this._scene._renderObject._mesh._material._shader.setUniform3fv(gl, 'in_color', this._scene._renderObject._mesh._material._wireframeColor);
-				this._scene._renderObject._mesh._material._shader.setUnform1i('in_isWireframe', 1);
+				// Configure the shader:
+				this._scene._renderObject._mesh._material._wireframeShader.bind();
+				this.configureShaderForCurrentRender(this._scene._renderObject._mesh._material._wireframeShader, true);
 
-				gl.lineWidth(2.0);	// Deprecated, doesn't seem to have any effect but we set it anyway..
+				gl.lineWidth(2.0);	// Deprecated, doesn't seem to have any effect but we set it anyway...
 
 				// Draw!
 				gl.drawArrays(gl.LINES, 0, this._scene._renderObject._mesh._positionData.length);
@@ -130,9 +132,10 @@ class sceneManager
 		activeShader.setUniform3fv(gl, 'in_cameraPosW', this._scene._camera._transform._position);
 
 		// Upload appropriate color:
-		activeShader.setUniform3fv(gl, 'in_color', isWireframe ? this._scene._renderObject._mesh._material._wireframeColor : this._scene._renderObject._mesh._material._color);
-
-		this._scene._renderObject._mesh._material._shader.setUnform1i('in_isWireframe', 0);
+		if (!isWireframe)
+		{
+			activeShader.setUniform3fv(gl, 'in_color', isWireframe ? this._scene._renderObject._mesh._material._wireframeColor : this._scene._renderObject._mesh._material._color);
+		}		
 	}
 }
 
