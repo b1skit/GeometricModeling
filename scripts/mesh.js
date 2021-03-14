@@ -843,10 +843,9 @@ class mesh
 
 		// Prevent decimation if it will result in a mesh that is not a connected, manifold triangle mesh. 
 		var currentEdgeCount = this.getNum1WayEdges();
-		const MAX_REMOVABLE_EDGES = (currentEdgeCount / 3);	// We lose a minimum of 3 edges each time we collapse
-		if (numEdges > (MAX_REMOVABLE_EDGES))	// Ensure we always have at least 6 edges, to guarantee a triangular pyramid
+		if (numEdges > currentEdgeCount)	// Ensure we always have at least 6 edges, to guarantee a triangular pyramid
 		{
-			alert("[mesh][decimateMesh] Error: Decimating " + numEdges + " edges would result in an invalid mesh. The current mesh has " + currentEdgeCount + " edges. At most " + MAX_REMOVABLE_EDGES + " edges can be attempted to be removed, as each collapse reduces the total edges by a minimum of 3.");
+			alert("[mesh][decimateMesh] Error: Attempting to demimate too many edges. The current mesh only has " + currentEdgeCount + " edges.");
 			return;
 		}
 
