@@ -8,7 +8,7 @@
 
 // Mesh debugging:
 // 'use strict';
-var DEBUG_ENABLED 		= false;
+var DEBUG_ENABLED 		= true;
 var DEBUG_SPECIFY_EDGES = false;
 var debugEdgeIndex = 0;
 var debugEdgeVerts = 
@@ -1421,6 +1421,10 @@ class mesh
 							// Insert the updated edges back into the table:
 							this._edges[currentEdge._vertOrigin._vertIndex][currentEdge._vertDest._vertIndex] 		= currentEdge;
 							this._edges[invCurrentEdge._vertOrigin._vertIndex][invCurrentEdge._vertDest._vertIndex] = invCurrentEdge;
+
+							// Update face normals:
+							currentEdge._faceLeft.computeFaceNormal(false);
+							currentEdge._faceRight.computeFaceNormal(false);
 						}
 					}
 

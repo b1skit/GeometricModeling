@@ -17,6 +17,9 @@
 //		http://www.graphics.rwth-aachen.de/media/papers/mcd_vmv021.pdf
 
 
+// TODO: 
+// UPDATE README WITH TESTED SIZES
+// UPDATE VERTEX->EDGE POINTER after decimation
 
 
 /*	HTML -> Javascript hooks:
@@ -66,6 +69,7 @@ function loadOBJ(objURL)
 	// objURL = 'http://www.sfu.ca/~abadke/temp/cube4x4.obj';
 	// objURL = 'http://www.sfu.ca/~abadke/temp/cubeDegree5Faces.obj';
 	//objURL = 'https://gist.githubusercontent.com/MaikKlein/0b6d6bb58772c13593d0a0add6004c1c/raw/48cf9c6d1cdd43cc6862d7d34a68114e2b93d497/cube.obj';
+	// a1:
 	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/horse_s.obj';
 	// objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/goodhand.obj';
 	// objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/venus.obj';
@@ -74,6 +78,14 @@ function loadOBJ(objURL)
 	// objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/horse.obj';
 	// objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/subdivision/chess_piece.obj';
 	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/subdivision/small_horse.obj';
+	
+	// a2:
+	// objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/armhand.obj';
+	// objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/bigfish.obj';
+	// objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/bigsmile.obj';
+	// objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/horse.obj';
+	// objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/man.obj';
+	// objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/nice8.obj';
 	
 	// Create a new render object and add it to the scene:
 	theRenderObject = new renderObject();
