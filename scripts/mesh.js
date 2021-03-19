@@ -8,13 +8,13 @@
 
 // Mesh debugging:
 // 'use strict';
-var DEBUG_ENABLED 		= true;
+var DEBUG_ENABLED 		= false;
 var DEBUG_SPECIFY_EDGES = false;
 var debugEdgeIndex = 0;
 var debugEdgeVerts = 
 [
-	[1, 3],
-	[1, 6],
+	[7,6],
+	[3,2],
 
 ];
 var DEBUG_EDGE_SEQUENCE = "";
@@ -240,14 +240,14 @@ class mesh
     _edges      = null;		// 2D table
     _vertices   = null;
 
-	_vertexDegree 			= [];
-	_vertexDegreeIsDirty 	= true;
+	_vertexDegree 				= [];
+	_vertexDegreesAreDirty 		= true;
 
-	_numEdgesIsDirty 	= true;
-	_numEdges 			= -1;
-	_condensedEdgeList 	= null;				// Condensed list of edges. Computed during getStratifiedEdges() call
+	_numEdgesIsDirty 			= true;
+	_numEdges 					= -1;
+	_condensedEdgeList 			= null;				// Condensed list of edges. Computed during getRandomEdges() call
 
-	_errorQuadricsAreComputed = false;
+	_errorQuadricsAreComputed 	= false;
 
     constructor()
     {
@@ -305,11 +305,26 @@ class mesh
 	}
 
 
+	// Decimation helper: Count the current degree via the edge table
+	countVertexDegree(vertexIndex)
+	{
+		var currentCount = 0;
+		for (var currentCol = 0; currentCol < this._edges[0].length; currentCol++)
+		{
+			if (this._edges[vertexIndex][currentCol] != null)
+			{
+				currentCount++;
+			}			
+		}
+		return currentCount;
+	}
+
+
 	// Subdivision helper: Get the number of edges connected to a vertex
 	getVertexDegree(vertexIndex)
 	{
 		// Recompute all vertex degrees, if required:
-		if (this._vertexDegreeIsDirty == true)
+		if (this._vertexDegreesAreDirty == true)
 		{
 			this._vertexDegree = [];
 
@@ -328,12 +343,7 @@ class mesh
 				this._vertexDegree.push(currentCount);	// Each element of this array holds the neighbor count of the vertex sharing the same index
 			}
 
-			this._vertexDegreeIsDirty = false;
-		}
-
-		if (vertexIndex >= this._vertexDegree.length)
-		{
-			console.log("[mesh][getVertexDegree] ERROR: Invalid vertex index " + vertexIndex + ": There are only " + this._vertexDegree.length + " vertices!");
+			this._vertexDegreesAreDirty = false;
 		}
 
 		return this._vertexDegree[vertexIndex];
@@ -381,7 +391,7 @@ class mesh
 		{
 			this._vertices[candidateVertex._vertIndex] = candidateVertex;
 
-			this._vertexDegreeIsDirty = true;	// We only use this later during subdivison, but setting the flag here as a precaution
+			this._vertexDegreesAreDirty = true;	// We only use this later during subdivison, but setting the flag here as a precaution
 		}
 
 		return this._vertices[candidateVertex._vertIndex];
@@ -797,7 +807,7 @@ class mesh
 
 
 	// Get a random (stratified) edge
-	getStratifiedEdge(currentCandidate, numCandidates)
+	getRandomEdge(currentCandidate, numCandidates)
 	{
 		// Build a list of all edges the first time this function is called:
 		if (currentCandidate == 0)
@@ -816,18 +826,24 @@ class mesh
 			}
 		}
 
-		var numEdges 			= this._condensedEdgeList.length;
-
-		var stratumWidth 		= numEdges / numCandidates;	// 1.0/numCandidates * numEdges
-
+		// STRATIFIED:
+		const totalEdges 		= this._condensedEdgeList.length;
+		var stratumWidth 		= totalEdges / numCandidates;	// 1.0/numCandidates * totalEdges
 		var stratumStartIndex 	= stratumWidth * currentCandidate;
-
 		var selectedIndex 		= stratumStartIndex + (Math.random() * stratumWidth);	// random returns values in [0, 1)
+		selectedIndex 			= Math.min(Math.round(selectedIndex), totalEdges - 1);	// Ensure we don't go out of bounds
 
-		selectedIndex 			= Math.min(Math.round(selectedIndex), numEdges - 1);	// Ensure we don't go out of bounds
+
+		// NON-STRATIFIED:
+		// const totalEdges 		= this._condensedEdgeList.length;
+		// var selectedIndex 		= (Math.random() * totalEdges);	// random returns values in [0, 1)
+		// selectedIndex 			= Math.min(Math.round(selectedIndex), totalEdges - 1);	// Ensure we don't go out of bounds
+
 
 		var searchedEdges = 0;
-		while (this._condensedEdgeList[selectedIndex] == null)
+		while (
+			this._condensedEdgeList[selectedIndex] == null || 
+			this._edges[this._condensedEdgeList[selectedIndex]._vertOrigin._vertIndex][this._condensedEdgeList[selectedIndex]._vertDest._vertIndex] == null)
 		{
 			selectedIndex = (selectedIndex + 1) % this._condensedEdgeList.length;	// Wrap the index around
 
@@ -838,9 +854,11 @@ class mesh
 				break;
 			}
 		}
-		
+
 		var selectedEdge 						= this._condensedEdgeList[selectedIndex];
 		this._condensedEdgeList[selectedIndex] 	= null; // Remove the edge from the list
+
+		// console.log("selectedIndex = " + selectedIndex + " / " + this._condensedEdgeList.length);
 
 		if (DEBUG_ENABLED && DEBUG_SPECIFY_EDGES)
 		{
@@ -849,8 +867,41 @@ class mesh
 		else
 		{
 			return selectedEdge;
-		}		
+		}
 	}
+
+
+	// Helper function: Check if an collapsing an 
+	checkForFlippedNormal(candidateEdge, candidatePosition)
+	{
+		var v1 = vec3.create();				
+		vec3.subtract(v1, candidateEdge._vertOrigin._position, candidatePosition);
+		vec3.normalize(v1, v1);
+
+		var v2 = vec3.create();				
+		vec3.subtract(v2, candidatePosition, candidateEdge._edgeLeftCCW._vertDest._position);
+		vec3.normalize(v2, v2);
+
+		var newNormalLeft = vec3.create();
+		vec3.cross(newNormalLeft, v2, v1);	// NOTE: Not normalized!
+
+		var v3 = vec3.create();				
+		vec3.subtract(v3, candidateEdge._vertOrigin._position,candidatePosition);
+		vec3.normalize(v3, v3);
+
+		var v4 = vec3.create();				
+		vec3.subtract(v4, this.getInverseEdge(candidateEdge)._edgeLeftCCW._vertDest._position, candidateEdge._vertOrigin._position);
+		vec3.normalize(v4, v4);
+
+		var newNormalRight = vec3.create();
+		vec3.cross(newNormalRight, v4, v3);	// NOTE: Not normalized!
+
+		return (vec3.dot(newNormalRight, candidateEdge._faceRight._faceNormal) > 0 &&
+				vec3.dot(newNormalLeft, candidateEdge._faceLeft._faceNormal) > 0
+		);
+
+	}
+
 
 	// Decimate the mesh
 	decimateMesh(numEdges, k)
@@ -912,6 +963,9 @@ class mesh
 				}
 			}
 
+			this._vertexDegreesAreDirty 	= true;		// Mark the vertex degree count as dirty to ensure we recalculate the degrees
+			this._numEdgesIsDirty 			= true;		// Mark the edges table as dirty
+
 			// Maintain the best candidate seen so far:
 			var selectedEdge 			= null;
 			var selectedEdgeError 		= Infinity;
@@ -921,7 +975,7 @@ class mesh
 			for (var currentCandidate = 0; currentCandidate < k; currentCandidate++)
 			{
 				// Select a stratified edge for consideration:
-				var candidateEdge = this.getStratifiedEdge(currentCandidate, k);
+				var candidateEdge = this.getRandomEdge(currentCandidate, k);
 
 				if(candidateEdge == null)
 				{
@@ -963,21 +1017,34 @@ class mesh
 					vec4.scale(candidateCollapsedPosition, candidateCollapsedPosition, 0.5);
 				}
 
-				// Compute the error of the contracted position:
-				var result = vec4.create();
 
-				// Q * v:
-				vec4.transformMat4(result, candidateCollapsedPosition, combinedVertQuadrics);
-
-				// v^T * (Q * v):
-				var candidateError = vec4.dot(candidateCollapsedPosition, result);
-
-				if (candidateError < selectedEdgeError)
+				// Ensure the collapsed position doesn't result in a normal flip:
+				var isFlipped = this.checkForFlippedNormal(candidateEdge, candidateCollapsedPosition);
+				if (isFlipped)
 				{
-					selectedEdge 			= candidateEdge;
-					selectedEdgeError 		= candidateError;
-					collapsedVertexPosition = candidateCollapsedPosition;
+					currentCandidate--;
+					continue;
 				}
+
+				if (!isFlipped)
+				{
+					// Compute the error of the contracted position:
+					var result = vec4.create();
+
+					// Q * v:
+					vec4.transformMat4(result, candidateCollapsedPosition, combinedVertQuadrics);
+
+					// v^T * (Q * v):
+					var candidateError = vec4.dot(candidateCollapsedPosition, result);
+
+					if (candidateError < selectedEdgeError)
+					{
+						selectedEdge 			= candidateEdge;
+						selectedEdgeError 		= candidateError;
+						collapsedVertexPosition = candidateCollapsedPosition;
+					}
+				}
+				
 			}	// End of random selection loop
 
 
@@ -1070,7 +1137,8 @@ class mesh
 
 
 				// Find the degree of the deprecated vertex:
-				var destVertDegree = this.getVertexDegree( selectedEdge._vertDest._vertIndex);
+				var destVertDegree = this.countVertexDegree( selectedEdge._vertDest._vertIndex);
+				
 
 				// Update the origin vertex position to match the computed ideal vertex position:
 				selectedEdge._vertOrigin._position 	= vec3.fromValues(collapsedVertexPosition[0], collapsedVertexPosition[1], collapsedVertexPosition[2]);		
@@ -1080,6 +1148,8 @@ class mesh
 					console.log("Decimating edge: " + selectedEdge._vertOrigin._vertIndex + " -> " + selectedEdge._vertDest._vertIndex);
 					console.log("Destination (vert idx = " +  selectedEdge._vertDest._vertIndex + ") degree = " + destVertDegree);
 					console.log("collapsed position = " + collapsedVertexPosition[0] + ", " + collapsedVertexPosition[1] + " " + collapsedVertexPosition[2]);
+					console.log("Edge origin pos = " + selectedEdge._vertOrigin._position[0] + ", " + selectedEdge._vertOrigin._position[1] + " " + selectedEdge._vertOrigin._position[2]);
+					console.log("Edge dest pos = " + selectedEdge._vertDest._position[0] + ", " + selectedEdge._vertDest._position[1] + " " + selectedEdge._vertDest._position[2]);
 				}				
 				
 
@@ -1161,6 +1231,9 @@ class mesh
 					// Update the surviving edge vertices:
 					innerEdge._vertOrigin 	= selectedEdge._vertOrigin;
 					invInnerEdge._vertDest 	= selectedEdge._vertOrigin;
+
+					// Update the vert -> edge pointer:
+					innerEdge._vertOrigin._edge = innerEdge;
 
 					this._edges[innerEdge._vertOrigin._vertIndex][innerEdge._vertDest._vertIndex]		= innerEdge;
 					this._edges[invInnerEdge._vertOrigin._vertIndex][invInnerEdge._vertDest._vertIndex] = invInnerEdge;
@@ -1277,6 +1350,9 @@ class mesh
 
 					rightInnerEdge._vertDest 		= selectedEdge._vertOrigin;
 					invRightInnerEdge._vertOrigin 	= selectedEdge._vertOrigin;
+
+					// Update the vert -> edge pointer:
+					leftInnerEdge._vertOrigin._edge = leftInnerEdge;
 
 					// Reinsert into the edge table:
 					this._edges[leftInnerEdge._vertOrigin._vertIndex][leftInnerEdge._vertDest._vertIndex] 			= leftInnerEdge;
@@ -1428,6 +1504,9 @@ class mesh
 						}
 					}
 
+					// Update the vert -> edge pointer:
+					leftEdge._vertOrigin._edge = leftEdge;
+
 					// Update the edge pointers:
 					leftEdge._edgeLeftCCW 		= leftEdgeCCW; 	// Not necessary, but for readability...
 					leftEdgeCCW._edgeLeftCCW	= botLeftEdge;
@@ -1503,9 +1582,9 @@ class mesh
 						console.log("Deleted selected edge: " + selectedEdge._vertOrigin._vertIndex + " -> " + selectedEdge._vertDest._vertIndex);
 						console.log("Deleted inverse selected edge: " + selectedEdge._vertDest._vertIndex + " -> " + selectedEdge._vertOrigin._vertIndex);
 						console.log("Deleted vertex " + selectedEdge._vertDest._vertIndex);
-					}
 
-					this.removeEmptyPrimitives();
+						console.log("Deleted vertex Pos " + selectedEdge._vertDest._position[0] + ", " +selectedEdge._vertDest._position[1] + ", " +selectedEdge._vertDest._position[2]);
+					}
 				}
 		
 				if (DEBUG_ENABLED)
@@ -1521,6 +1600,8 @@ class mesh
 
 
 		} // End of edge loop
+
+		this.removeEmptyPrimitives();
 
 		console.log("[mesh][decimateMesh] Decimation complete! New mesh has " + this.getNum1WayEdges() + " edges, " + this._faces.length + " faces, and vert array size = " + this._vertices.length);
 
@@ -1606,9 +1687,6 @@ class mesh
 
 		// Recompute the face normal
 		selectedEdge._faceLeft.computeFaceNormal(false);
-
-		// Cleanup:
-		this.removeEmptyPrimitives();
 	}
 
 
@@ -1626,6 +1704,9 @@ class mesh
 		{
 			if (this._faces[currentFace] != null)
 			{
+				// Recompute the face normal:
+				this._faces[currentFace].computeFaceNormal(false);
+
 				this._faces[currentFace]._faceIndex = newFaces.length;
 				newFaces.push(this._faces[currentFace]);
 			}
@@ -1641,10 +1722,10 @@ class mesh
 				this._vertices[currentVert]._vertIndex = newVerts.length;
 				newVerts.push(this._vertices[currentVert]);
 
-				// if (DEBUG_ENABLED)
-				// {
-				// 	console.log("Remapped vertex [" + currentVert + "] -> [" + this._vertices[currentVert]._vertIndex + "]");
-				// }
+				if (DEBUG_ENABLED)
+				{
+					// console.log("Remapped vertex [" + currentVert + "] -> [" + this._vertices[currentVert]._vertIndex + "]");
+				}
 			}					
 		}
 		this._vertices 	= newVerts;
@@ -1684,7 +1765,7 @@ class mesh
 		this._edges 	= newEdges;
 
 		this._numEdgesIsDirty 		= true;
-		this._vertexDegreeIsDirty 	= true;
+		this._vertexDegreesAreDirty 	= true;
 
 		if (DEBUG_ENABLED)
 		{
@@ -1724,8 +1805,8 @@ class mesh
 	{
 		var totalEdges = this.getNum1WayEdges();
 
-		this._vertexDegreeIsDirty 	= true;		// Mark the vertex degree count as dirty to ensure we recalculate the degrees
-		this._numEdgesIsDirty 		= true;		// Mark the edges table as dirty
+		this._vertexDegreesAreDirty 	= true;		// Mark the vertex degree count as dirty to ensure we recalculate the degrees
+		this._numEdgesIsDirty 			= true;		// Mark the edges table as dirty
 
 		// Calculate the number of vertices in the subdivided mesh:
 		var newTotalVerts = this._vertices.length + totalEdges;
@@ -2087,7 +2168,7 @@ class mesh
 		this._edges 	= newEdges;
 		this._vertices 	= newVerts;
 
-		this._vertexDegreeIsDirty 	= true;		// Mark the vertex degree count as dirty to ensure we recalculate the degrees
+		this._vertexDegreesAreDirty 	= true;		// Mark the vertex degree count as dirty to ensure we recalculate the degrees
 		this._numEdgesIsDirty 		= true;		// Mark the edges table as dirty
 
 		// Compute smooth normals:
@@ -2550,7 +2631,7 @@ class mesh
 		{
 			if (this._vertices[c] == null)
 			{
-				console.log("Vertex at index " + c + " is null, skipping...");
+				// console.log("Vertex at index " + c + " is null, skipping...");
 				continue;
 			}
 			if (this._vertices[c]._vertIndex != c)

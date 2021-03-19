@@ -17,9 +17,7 @@
 //		http://www.graphics.rwth-aachen.de/media/papers/mcd_vmv021.pdf
 
 
-// TODO: 
-// UPDATE README WITH TESTED SIZES
-// UPDATE VERTEX->EDGE POINTER after decimation
+// REASONABLE DEFAULTS FOR HTML SIDE
 
 
 /*	HTML -> Javascript hooks:

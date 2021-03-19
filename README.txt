@@ -27,4 +27,6 @@ The total number of edges in the mesh is reduced by a minimum of 3 for each iter
 
 For example, if an edge e is selected for collapse, and it is flanked by a face f with a degree 3 vertex v not part of the selected edge e, to avoid degenerate faces after e has been collapsed, the edge terminating at v that is not part of f will also be collapsed prior to the collapse of e. Thus, in this case the total number of edges removed will be greater than 3.
 
+This strategy avoids any bias in the random edge selection, but may result in the number of edges removed not matching the input precisely.
+
 Additionally, to maintain a closed triangle mesh, this program will not collapse edges once there are 6 remaining edges in the mesh. This is implemented via both a UI check, and checks within the decimation code that will terminate edge collapse once the number of edges is reduced to 6.
