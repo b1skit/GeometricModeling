@@ -17,9 +17,6 @@
 //		http://www.graphics.rwth-aachen.de/media/papers/mcd_vmv021.pdf
 
 
-// TODO:
-// Replace "==" with "===" (SAFETY: DO IT as a single CL though!)
-
 
 /*	HTML -> Javascript hooks:
 *
