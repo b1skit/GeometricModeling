@@ -17,7 +17,8 @@
 //		http://www.graphics.rwth-aachen.de/media/papers/mcd_vmv021.pdf
 
 
-// REASONABLE DEFAULTS FOR HTML SIDE
+// TODO:
+// Replace "==" with "===" (SAFETY: DO IT as a single CL though!)
 
 
 /*	HTML -> Javascript hooks:

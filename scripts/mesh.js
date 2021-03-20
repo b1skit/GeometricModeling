@@ -806,100 +806,165 @@ class mesh
 	}
 
 
-	// Get a random (stratified) edge
+	// Get a random edge
 	getRandomEdge(currentCandidate, numCandidates)
 	{
-		// Build a list of all edges the first time this function is called:
-		if (currentCandidate == 0)
-		{
-			this._condensedEdgeList = [];
+		const totalEdges = this._edges[0].length * this._edges[0].length;
 
-			for (var row = 0; row < this._edges[0].length; row++)
+		var selectedIndex 		= Math.random() * totalEdges;	// random returns values in [0, 1)
+		selectedIndex 			= Math.min(Math.round(selectedIndex), totalEdges - 1);
+
+		var row = Math.floor(selectedIndex / this._edges[0].length);
+		var col = selectedIndex % this._edges[0].length;
+		
+		let count = 0;
+		while (this._edges[row][col] === null)
+		{
+			col = (col + 1) % this._edges[0].length;
+
+			if (col === 0)
 			{
-				for (var col = 0; col < this._edges[0].length; col++)
-				{
-					if (this._edges[row][col] != null)
-					{
-						this._condensedEdgeList.push(this._edges[row][col]);
-					}
-				}
+				row = (row + 1) % this._edges[0].length;
 			}
-		}
 
-		// STRATIFIED:
-		const totalEdges 		= this._condensedEdgeList.length;
-		var stratumWidth 		= totalEdges / numCandidates;	// 1.0/numCandidates * totalEdges
-		var stratumStartIndex 	= stratumWidth * currentCandidate;
-		var selectedIndex 		= stratumStartIndex + (Math.random() * stratumWidth);	// random returns values in [0, 1)
-		selectedIndex 			= Math.min(Math.round(selectedIndex), totalEdges - 1);	// Ensure we don't go out of bounds
-
-
-		// NON-STRATIFIED:
-		// const totalEdges 		= this._condensedEdgeList.length;
-		// var selectedIndex 		= (Math.random() * totalEdges);	// random returns values in [0, 1)
-		// selectedIndex 			= Math.min(Math.round(selectedIndex), totalEdges - 1);	// Ensure we don't go out of bounds
-
-
-		var searchedEdges = 0;
-		while (
-			this._condensedEdgeList[selectedIndex] == null || 
-			this._edges[this._condensedEdgeList[selectedIndex]._vertOrigin._vertIndex][this._condensedEdgeList[selectedIndex]._vertDest._vertIndex] == null)
-		{
-			selectedIndex = (selectedIndex + 1) % this._condensedEdgeList.length;	// Wrap the index around
-
-			searchedEdges++;
-			if (searchedEdges > this._condensedEdgeList.length)
+			count++;
+			if (count > totalEdges)
 			{
-				console.log("[mesh][getStratifiedEdge]ERROR: Condensed edge list is empty, cannot retrieve a random edge!");
+				console.log("ERROR: Could not select a random edge, edges table is empty!");
 				break;
 			}
 		}
 
-		var selectedEdge 						= this._condensedEdgeList[selectedIndex];
-		this._condensedEdgeList[selectedIndex] 	= null; // Remove the edge from the list
+		return this._edges[row][col];
 
-		// console.log("selectedIndex = " + selectedIndex + " / " + this._condensedEdgeList.length);
 
-		if (DEBUG_ENABLED && DEBUG_SPECIFY_EDGES)
-		{
-			return this._edges[ debugEdgeVerts[debugEdgeIndex][0] ][ debugEdgeVerts[debugEdgeIndex++][1] ];
-		}
-		else
-		{
-			return selectedEdge;
-		}
+		// // Build a list of all edges the first time this function is called:
+		// if (currentCandidate == 0)
+		// {
+		// 	this._condensedEdgeList = [];
+
+		// 	for (var row = 0; row < this._edges[0].length; row++)
+		// 	{
+		// 		for (var col = 0; col < this._edges[0].length; col++)
+		// 		{
+		// 			if (this._edges[row][col] != null)
+		// 			{
+		// 				this._condensedEdgeList.push(this._edges[row][col]);
+		// 			}
+		// 		}
+		// 	}
+		// }
+
+		// // STRATIFIED:
+		// const totalEdges 		= this._condensedEdgeList.length;
+		// var stratumWidth 		= totalEdges / numCandidates;	// 1.0/numCandidates * totalEdges
+		// var stratumStartIndex 	= stratumWidth * currentCandidate;
+		// var selectedIndex 		= stratumStartIndex + (Math.random() * stratumWidth);	// random returns values in [0, 1)
+		// selectedIndex 			= Math.min(Math.round(selectedIndex), totalEdges - 1);	// Ensure we don't go out of bounds
+
+
+		// // NON-STRATIFIED:
+		// // const totalEdges 		= this._condensedEdgeList.length;
+		// // var selectedIndex 		= (Math.random() * totalEdges);	// random returns values in [0, 1)
+		// // selectedIndex 			= Math.min(Math.round(selectedIndex), totalEdges - 1);	// Ensure we don't go out of bounds
+
+
+		// var searchedEdges = 0;
+		// while (
+		// 	this._condensedEdgeList[selectedIndex] == null || 
+		// 	this._edges[this._condensedEdgeList[selectedIndex]._vertOrigin._vertIndex][this._condensedEdgeList[selectedIndex]._vertDest._vertIndex] == null)
+		// {
+		// 	selectedIndex = (selectedIndex + 1) % this._condensedEdgeList.length;	// Wrap the index around
+
+		// 	searchedEdges++;
+		// 	if (searchedEdges > this._condensedEdgeList.length)
+		// 	{
+		// 		console.log("[mesh][getStratifiedEdge]ERROR: Condensed edge list is empty, cannot retrieve a random edge!");
+		// 		break;
+		// 	}
+		// }
+
+		// var selectedEdge 						= this._condensedEdgeList[selectedIndex];
+		// this._condensedEdgeList[selectedIndex] 	= null; // Remove the edge from the list
+
+		// if (DEBUG_ENABLED && DEBUG_SPECIFY_EDGES)
+		// {
+		// 	return this._edges[ debugEdgeVerts[debugEdgeIndex][0] ][ debugEdgeVerts[debugEdgeIndex++][1] ];
+		// }
+		// else
+		// {
+		// 	return selectedEdge;
+		// }
 	}
 
 
-	// Helper function: Check if an collapsing an 
-	checkForFlippedNormal(candidateEdge, candidatePosition)
+	// Helper function: Check if an collapsing an edge will result in a flipped normal w.r.t neighboring faces
+	willFlipNormal(candidateEdge, candidatePosition)
 	{
-		var v1 = vec3.create();				
-		vec3.subtract(v1, candidateEdge._vertOrigin._position, candidatePosition);
-		vec3.normalize(v1, v1);
+		var newNormal 	= vec3.create();
+		var v1 			= vec3.create();
+		var v2 			= vec3.create();
 
-		var v2 = vec3.create();				
-		vec3.subtract(v2, candidatePosition, candidateEdge._edgeLeftCCW._vertDest._position);
+		// Check each of the 4 neighboring faces:
+
+		// Bottom-left:
+		vec3.subtract(v1, candidateEdge._edgeLeftCW._vertOrigin._position, candidatePosition);
+		vec3.normalize(v1, v1);
+		
+		vec3.subtract(v2, this.getInverseEdge(candidateEdge._edgeLeftCW)._edgeLeftCW._vertOrigin._position, candidatePosition);
 		vec3.normalize(v2, v2);
 
-		var newNormalLeft = vec3.create();
-		vec3.cross(newNormalLeft, v2, v1);	// NOTE: Not normalized!
+		vec3.cross(newNormal, v1, v2);	// NOTE: Not normalized!
 
-		var v3 = vec3.create();				
-		vec3.subtract(v3, candidateEdge._vertOrigin._position,candidatePosition);
-		vec3.normalize(v3, v3);
+		if (vec3.dot(newNormal, candidateEdge._edgeLeftCW._faceRight._faceNormal) < 0)
+		{
+			return true;
+		}
 
-		var v4 = vec3.create();				
-		vec3.subtract(v4, this.getInverseEdge(candidateEdge)._edgeLeftCCW._vertDest._position, candidateEdge._vertOrigin._position);
-		vec3.normalize(v4, v4);
+		// Top-left:
+		vec3.subtract(v1, this.getInverseEdge(candidateEdge._edgeLeftCCW)._edgeLeftCCW._vertDest._position, candidatePosition);
+		vec3.normalize(v1, v1);
+		
+		vec3.subtract(v2, candidateEdge._edgeLeftCCW._vertDest._position, candidatePosition);		
+		vec3.normalize(v2, v2);
 
-		var newNormalRight = vec3.create();
-		vec3.cross(newNormalRight, v4, v3);	// NOTE: Not normalized!
+		vec3.cross(newNormal, v1, v2);	// NOTE: Not normalized!
 
-		return (vec3.dot(newNormalRight, candidateEdge._faceRight._faceNormal) > 0 &&
-				vec3.dot(newNormalLeft, candidateEdge._faceLeft._faceNormal) > 0
-		);
+		if (vec3.dot(newNormal, candidateEdge._edgeLeftCCW._faceRight._faceNormal) < 0)
+		{
+			return true;
+		}
 
+		// Bot-right:
+		vec3.subtract(v1, this.getInverseEdge( this.getInverseEdge(candidateEdge)._edgeLeftCCW )._edgeLeftCCW._vertDest._position, candidatePosition);		
+		vec3.normalize(v1, v1);
+		
+		
+		vec3.subtract(v2, this.getInverseEdge(candidateEdge)._edgeLeftCCW._vertDest._position, candidatePosition);
+		vec3.normalize(v2, v2);
+
+		vec3.cross(newNormal, v1, v2);	// NOTE: Not normalized!
+
+		if (vec3.dot(newNormal, this.getInverseEdge(candidateEdge)._edgeLeftCCW._faceRight._faceNormal) < 0)
+		{
+			return true;
+		}
+
+		// Top-right:
+		vec3.subtract(v1, this.getInverseEdge(candidateEdge)._edgeLeftCCW._vertDest._position, candidatePosition);
+		vec3.normalize(v1, v1);		
+		
+		vec3.subtract(v2, this.getInverseEdge( this.getInverseEdge(candidateEdge)._edgeLeftCW )._edgeLeftCW._vertOrigin._position, candidatePosition);
+		vec3.normalize(v2, v2);
+
+		vec3.cross(newNormal, v1, v2);	// NOTE: Not normalized!
+
+		if (vec3.dot(newNormal, this.getInverseEdge(candidateEdge)._edgeLeftCW._faceRight._faceNormal) < 0)
+		{
+			return true;
+		}
+		
+		return false;
 	}
 
 
@@ -936,6 +1001,8 @@ class mesh
 				k = 1;	// Only want to consider a single edge from our manually-specified edge list...
 			}
 		}
+
+		console.log("[mesh][decimateMesh] Decimating mesh...");
 
 
 		// Initialize the error planes for the mesh:
@@ -983,6 +1050,13 @@ class mesh
 					break;
 				}
 
+				// Ensure we don't reconsider the currently selected edge:
+				if(candidateEdge === selectedEdge)
+				{
+					currentCandidate--;
+					continue;
+				}
+
 				// Compute the optimized location for an edge collapse:
 				var combinedVertQuadrics = mat4.create();
 				mat4.add(combinedVertQuadrics, candidateEdge._vertOrigin._errorQuadric, candidateEdge._vertDest._errorQuadric);
@@ -996,9 +1070,8 @@ class mesh
 				// Invert:
 				var combinedVertQuadricsInv 	= mat4.invert(combinedVertQuadrics, combinedVertQuadrics);
 
-				var candidateCollapsedPosition;
-
 				// If the matrix is invertible, compute the ideal reprojection location:
+				var candidateCollapsedPosition;
 				if (combinedVertQuadricsInv != null)
 				{
 					// Compute the contracted position with minimal error: (Q1 + Q2)(^-1) * [0,0,0,1]
@@ -1019,14 +1092,13 @@ class mesh
 
 
 				// Ensure the collapsed position doesn't result in a normal flip:
-				var isFlipped = this.checkForFlippedNormal(candidateEdge, candidateCollapsedPosition);
+				var isFlipped = this.willFlipNormal(candidateEdge, candidateCollapsedPosition);
 				if (isFlipped)
 				{
 					currentCandidate--;
 					continue;
 				}
-
-				if (!isFlipped)
+				else
 				{
 					// Compute the error of the contracted position:
 					var result = vec4.create();
@@ -1043,10 +1115,10 @@ class mesh
 						selectedEdgeError 		= candidateError;
 						collapsedVertexPosition = candidateCollapsedPosition;
 					}
+					else if (selectedEdge == null) console.log("candidate error = " + candidateError + ", selected error = " + selectedEdgeError);
 				}
 				
 			}	// End of random selection loop
-
 
 			// Remove the selected edge:
 			if (selectedEdge != null && selectedEdgeError != Infinity)
@@ -1082,7 +1154,7 @@ class mesh
 
 					if (currentEdgeCount <= 6)
 					{
-						console.log("ERROR: There are only " + currentEdgeCount + " edges in the mesh. Aborting decimation");
+						console.log("[mesh][decimateMesh]: There are only " + currentEdgeCount + " edges remaining in the mesh. Aborting decimation");
 						break;
 					}
 				}
