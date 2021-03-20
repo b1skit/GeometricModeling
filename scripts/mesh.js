@@ -7,7 +7,7 @@
 
 
 // Mesh debugging:
-// 'use strict';
+'use strict';
 var DEBUG_ENABLED 		= false;
 var DEBUG_SPECIFY_EDGES = false;
 var debugEdgeIndex = 0;
@@ -87,7 +87,8 @@ class face
 
 		// Compute d to satisfy the plane equation:
 		const referenceVertPos = this._edge._vertOrigin._position;
-		const d = -(this._faceNormal[0] * referenceVertPos[0]) - (this._faceNormal[1] * referenceVertPos[1]) - (this._faceNormal[2] * referenceVertPos[2]);
+		
+		const d = vec3.dot(this._faceNormal, referenceVertPos) * -1;
 
 		this._errorQuadric = mat4.fromValues(
 			a * a,	// Col 0
@@ -142,6 +143,13 @@ class vertex
 		this._smoothedNormal 	= vec3.fromValues(0.0, 0.0, 0.0);
 
 		this._vertIndex 		= vertIndex;
+
+		this._errorQuadric = mat4.fromValues(
+			0, 0, 0, 0, 
+			0, 0, 0, 0, 
+			0, 0, 0, 0, 
+			0, 0, 0, 0
+			);
     }
 
 
@@ -245,7 +253,6 @@ class mesh
 
 	_numEdgesIsDirty 			= true;
 	_numEdges 					= -1;
-	_condensedEdgeList 			= null;				// Condensed list of edges. Computed during getRandomEdges() call
 
 	_errorQuadricsAreComputed 	= false;
 
@@ -807,94 +814,27 @@ class mesh
 
 
 	// Get a random edge
-	getRandomEdge(currentCandidate, numCandidates)
+	getRandomEdge()
 	{
-		const totalEdges = this._edges[0].length * this._edges[0].length;
+		// Pick a random face:
+		let faceIndex = Math.random() * this._faces.length;
+		faceIndex = Math.min(Math.round(faceIndex), this._faces.length - 1);
 
-		var selectedIndex 		= Math.random() * totalEdges;	// random returns values in [0, 1)
-		selectedIndex 			= Math.min(Math.round(selectedIndex), totalEdges - 1);
-
-		var row = Math.floor(selectedIndex / this._edges[0].length);
-		var col = selectedIndex % this._edges[0].length;
-		
-		let count = 0;
-		while (this._edges[row][col] === null)
+		while(this._faces[faceIndex] === null)
 		{
-			col = (col + 1) % this._edges[0].length;
-
-			if (col === 0)
-			{
-				row = (row + 1) % this._edges[0].length;
-			}
-
-			count++;
-			if (count > totalEdges)
-			{
-				console.log("ERROR: Could not select a random edge, edges table is empty!");
-				break;
-			}
+			faceIndex = (faceIndex + 1) % this._faces.length;
 		}
 
-		return this._edges[row][col];
+		// Pick a random edge:
+		let edgeIndex = Math.floor( Math.random() * 3 );
 
+		let selectedEdge = this._faces[faceIndex]._edge;
+		for(var i = 0; i < edgeIndex; i++)
+		{
+			selectedEdge = selectedEdge._edgeLeftCCW;
+		}
 
-		// // Build a list of all edges the first time this function is called:
-		// if (currentCandidate == 0)
-		// {
-		// 	this._condensedEdgeList = [];
-
-		// 	for (var row = 0; row < this._edges[0].length; row++)
-		// 	{
-		// 		for (var col = 0; col < this._edges[0].length; col++)
-		// 		{
-		// 			if (this._edges[row][col] != null)
-		// 			{
-		// 				this._condensedEdgeList.push(this._edges[row][col]);
-		// 			}
-		// 		}
-		// 	}
-		// }
-
-		// // STRATIFIED:
-		// const totalEdges 		= this._condensedEdgeList.length;
-		// var stratumWidth 		= totalEdges / numCandidates;	// 1.0/numCandidates * totalEdges
-		// var stratumStartIndex 	= stratumWidth * currentCandidate;
-		// var selectedIndex 		= stratumStartIndex + (Math.random() * stratumWidth);	// random returns values in [0, 1)
-		// selectedIndex 			= Math.min(Math.round(selectedIndex), totalEdges - 1);	// Ensure we don't go out of bounds
-
-
-		// // NON-STRATIFIED:
-		// // const totalEdges 		= this._condensedEdgeList.length;
-		// // var selectedIndex 		= (Math.random() * totalEdges);	// random returns values in [0, 1)
-		// // selectedIndex 			= Math.min(Math.round(selectedIndex), totalEdges - 1);	// Ensure we don't go out of bounds
-
-
-		// var searchedEdges = 0;
-		// while (
-		// 	this._condensedEdgeList[selectedIndex] == null || 
-		// 	this._edges[this._condensedEdgeList[selectedIndex]._vertOrigin._vertIndex][this._condensedEdgeList[selectedIndex]._vertDest._vertIndex] == null)
-		// {
-		// 	selectedIndex = (selectedIndex + 1) % this._condensedEdgeList.length;	// Wrap the index around
-
-		// 	searchedEdges++;
-		// 	if (searchedEdges > this._condensedEdgeList.length)
-		// 	{
-		// 		console.log("[mesh][getStratifiedEdge]ERROR: Condensed edge list is empty, cannot retrieve a random edge!");
-		// 		break;
-		// 	}
-		// }
-
-		// var selectedEdge 						= this._condensedEdgeList[selectedIndex];
-		// this._condensedEdgeList[selectedIndex] 	= null; // Remove the edge from the list
-
-		// if (DEBUG_ENABLED && DEBUG_SPECIFY_EDGES)
-		// {
-		// 	return this._edges[ debugEdgeVerts[debugEdgeIndex][0] ][ debugEdgeVerts[debugEdgeIndex++][1] ];
-		// }
-		// else
-		// {
-		// 	return selectedEdge;
-		// }
+		return selectedEdge;
 	}
 
 
@@ -1042,7 +982,7 @@ class mesh
 			for (var currentCandidate = 0; currentCandidate < k; currentCandidate++)
 			{
 				// Select a stratified edge for consideration:
-				var candidateEdge = this.getRandomEdge(currentCandidate, k);
+				var candidateEdge = this.getRandomEdge();
 
 				if(candidateEdge == null)
 				{
@@ -1068,7 +1008,8 @@ class mesh
 				combinedVertQuadrics[15] 	= 1;
 				
 				// Invert:
-				var combinedVertQuadricsInv 	= mat4.invert(combinedVertQuadrics, combinedVertQuadrics);
+				var combinedVertQuadricsInv 	= mat4.create();
+				mat4.invert(combinedVertQuadricsInv, combinedVertQuadrics);
 
 				// If the matrix is invertible, compute the ideal reprojection location:
 				var candidateCollapsedPosition;
@@ -1115,7 +1056,6 @@ class mesh
 						selectedEdgeError 		= candidateError;
 						collapsedVertexPosition = candidateCollapsedPosition;
 					}
-					else if (selectedEdge == null) console.log("candidate error = " + candidateError + ", selected error = " + selectedEdgeError);
 				}
 				
 			}	// End of random selection loop
@@ -1637,10 +1577,6 @@ class mesh
 				// Cleanup:
 				if (destVertDegree != 3)	// If the dest degree is 3, we've already done this
 				{
-					// Update the remaining face normals:
-					selectedEdge._faceLeft.computeFaceNormal(false);
-					selectedEdge._faceRight.computeFaceNormal(false);
-
 					// Delete the selected edge:
 					this._edges[selectedEdge._vertOrigin._vertIndex][selectedEdge._vertDest._vertIndex] = null;
 					this._edges[selectedEdge._vertDest._vertIndex][selectedEdge._vertOrigin._vertIndex] = null;		
@@ -1675,7 +1611,7 @@ class mesh
 
 		this.removeEmptyPrimitives();
 
-		console.log("[mesh][decimateMesh] Decimation complete! New mesh has " + this.getNum1WayEdges() + " edges, " + this._faces.length + " faces, and vert array size = " + this._vertices.length);
+		console.log("[mesh][decimateMesh] Decimation complete! New mesh has " + this.getNum1WayEdges() + " (one-way) edges, " + this._faces.length + " faces, and vert array size = " + this._vertices.length);
 
 		// Compute the smooth normals:
 		this.computeSmoothNormals();
@@ -1794,10 +1730,10 @@ class mesh
 				this._vertices[currentVert]._vertIndex = newVerts.length;
 				newVerts.push(this._vertices[currentVert]);
 
-				if (DEBUG_ENABLED)
-				{
-					// console.log("Remapped vertex [" + currentVert + "] -> [" + this._vertices[currentVert]._vertIndex + "]");
-				}
+				// if (DEBUG_ENABLED)
+				// {
+				// 	console.log("Remapped vertex [" + currentVert + "] -> [" + this._vertices[currentVert]._vertIndex + "]");
+				// }
 			}					
 		}
 		this._vertices 	= newVerts;
@@ -1837,7 +1773,7 @@ class mesh
 		this._edges 	= newEdges;
 
 		this._numEdgesIsDirty 		= true;
-		this._vertexDegreesAreDirty 	= true;
+		this._vertexDegreesAreDirty = true;
 
 		if (DEBUG_ENABLED)
 		{
