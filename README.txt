@@ -38,7 +38,7 @@ Additionally, to maintain a closed triangle mesh, this program will not collapse
 
 A note on mesh sizes:
 ---------------------
-Unfortunately, I noticed some the Arm hand model (25,000 verts - https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/armhand.obj) causes occasional out-of-memory crashes/freezes on my browser/PC. If you encounter this, please choose a lower number of edges to decimate in a single pass, or test with a mesh with less vertices/a smaller memory footprint.
+Unfortunately, I noticed the Arm hand model (25,000 verts - https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/armhand.obj) causes occasional freezes/out-of-memory crashes on my browser/PC. If you encounter this, please choose a lower number of edges to decimate in a single pass, or test with a mesh with less vertices/a smaller memory footprint.
 
 I have done significant testing, and I believe this is an issue with the browser and my data structures, not a bug in the logic of my code. All of the other meshes provided in assignment 1 and 2 work perfectly. Additionally, subdivided meshes can also be decimated. The issue is due to my use of a 2D table to store edges. This table becomes very large for meshes with a large number of vertices.
 
