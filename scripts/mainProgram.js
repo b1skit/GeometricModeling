@@ -1,6 +1,6 @@
 // Main program logic
 
-// CMPT 764 Assignment 1
+// CMPT 764 Assignment 1/2
 // by Adam Badke
 // SFU Student #301310785
 // abadke@sfu.ca

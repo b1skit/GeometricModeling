@@ -15,18 +15,32 @@ The following resources were consulted during the creation of this assignment:
 		http://mgarland.org/files/papers/quadrics.pdf
 		http://www.graphics.rwth-aachen.de/media/papers/mcd_vmv021.pdf
 
+
 All requested features were implemented.
+
 
 This code was developed and tested using the Chrome browser with Windows 10. It also has been verified to work with the Windows Edge browser.
 If you have any issues running this code please contact me!
 
 
+
+
 A note on the number of edges collapsed per iteration:
 ------------------------------------------------------
-The total number of edges in the mesh is reduced by a minimum of 3 for each iteration of edge removal the user requests. However, the total number of edges removed may be greater than 3, due to degenerate cases.
+The total number of edges in the mesh is reduced by a minimum of 3 for each iteration of edge removal the user requests. Thus, collapsing 1 edge will reduce the edges in the mesh by a minimum of 3. The total number of edges removed may be greater than 3 due to degenerate cases:
 
-For example, if an edge e is selected for collapse, and it is flanked by a face f with a degree 3 vertex v not part of the selected edge e, to avoid degenerate faces after e has been collapsed, the edge terminating at v that is not part of f will also be collapsed prior to the collapse of e. Thus, in this case the total number of edges removed will be greater than 3.
+For example, if an edge e is selected for collapse, and it is flanked by a face f defined with a degree 3 vertex v not part of the selected edge e, to avoid degenerate faces after e has been collapsed, the edge terminating at v that is not part of f will also be collapsed prior to the collapse of e. Thus, in this case the total number of edges removed will be greater than 3.
 
 This strategy avoids any bias in the random edge selection, but may result in the number of edges removed not matching the input precisely.
 
 Additionally, to maintain a closed triangle mesh, this program will not collapse edges once there are 6 remaining edges in the mesh. This is implemented via both a UI check, and checks within the decimation code that will terminate edge collapse once the number of edges is reduced to 6.
+
+
+A note on mesh sizes:
+---------------------
+Unfortunately, I noticed some the Arm hand model (25,000 verts - https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/armhand.obj) causes occasional out-of-memory crashes/freezes on my browser/PC. If you encounter this, please choose a lower number of edges to decimate in a single pass, or test with a mesh with less vertices/a smaller memory footprint.
+
+I have done significant testing, and I believe this is an issue with the browser and my data structures, not a bug in the logic of my code. All of the other meshes provided in assignment 1 and 2 work perfectly. Additionally, subdivided meshes can also be decimated. The issue is due to my use of a 2D table to store edges. This table becomes very large for meshes with a large number of vertices.
+
+Had I realized this would be a problem, I would have chosen a different data structure (such as a hash map) to store edges. Alas, the 2D table worked fine for assignment #1 and for smaller meshes tested for this assignment #2 implementation. By the time I realized the issue, it was too late to change. I hope you understand! :)
+

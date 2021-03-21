@@ -730,7 +730,8 @@ class mesh
 		// Compute the smooth normals:
 		this.computeSmoothNormals();
 
-		console.log("[mesh::constructMeshFromOBJData] Extracted " + this._vertices.length + " vertices, " + (this._faces.length * 3) + " (bi-directional) edges, " + this._faces.length + " faces to the winged data structure");
+		// console.log("[mesh::constructMeshFromOBJData] Extracted " + this._vertices.length + " vertices, " + (this._faces.length * 3) + " (bi-directional) edges, " + this._faces.length + " faces to the winged data structure");
+		console.log("[mesh::constructMeshFromOBJData] Extracted " + this._vertices.length + " vertices, " + this.getNum1WayEdges() + " (one-way) edges, " + this._faces.length + " faces to the winged data structure");
 
         // Finally, initialize the render object mesh's vertex buffers:
         this.initializeBuffers();
@@ -955,7 +956,7 @@ class mesh
 		{
 			if (currentEdgeCount <= 6)
 			{
-				console.log("[mesh][decimateMesh] WARNING: There are only " + currentEdgeCount + " edges in the mesh. Aborting decimation");
+				console.log("[mesh][decimateMesh] There are only " + currentEdgeCount + " edges remaining in the mesh. Terminating decimation.");
 				break;
 			}
 
@@ -988,13 +989,6 @@ class mesh
 				{
 					console.log("[mesh][decimateMesh] Error: Received a null candidate edge... Aborting decimation");
 					break;
-				}
-
-				// Ensure we don't reconsider the currently selected edge:
-				if(candidateEdge === selectedEdge)
-				{
-					currentCandidate--;
-					continue;
 				}
 
 				// Compute the optimized location for an edge collapse:
