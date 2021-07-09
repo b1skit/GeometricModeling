@@ -1,9 +1,8 @@
 // Scene objects: Environment that renderObjects are rendered in/with
 
-// CMPT 764 Assignment 1/2
+// Geometric Modeling
 // by Adam Badke
-// SFU Student #301310785
-// abadke@sfu.ca
+// adambadke@gmail.com
 
 
 

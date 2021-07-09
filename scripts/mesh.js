@@ -1,9 +1,8 @@
 // mesh object: Geometry contained by a renderObject
 
-// CMPT 764 Assignment 1/2
+// Geometric Modeling
 // by Adam Badke
-// SFU Student #301310785
-// abadke@sfu.ca
+// adambadke@gmail.com
 
 
 // Mesh debugging:
@@ -258,22 +257,42 @@ class mesh
 
     constructor()
     {
-
+		// Do nothing...
     }
 
 
-	// Get the number of edges in the mesh
-	// Only returns 1-way edges
+	// Get an directed edge from our edge table
+	// Note: Returned edge may be null
+	getEdge(originVertIndex, destVertIndex)
+	{
+		return this._edges[originVertIndex][destVertIndex];
+	}
+
+	// Set a directed edge in our edge table
+	// Note: newEdge is not checked for null...
+	addEdge(newEdge)
+	{
+		this._edges[newEdge._vertOrigin._vertIndex][newEdge._vertDest._vertIndex] = newEdge;
+	}
+
+	// Remove a directed edge from our edge table
+	removeEdge(originVertIndex, destVertIndex)
+	{
+		this._edges[originVertIndex][destVertIndex] = null;
+	}
+
+
+	// Get the number of 1-way edges in the mesh
 	getNum1WayEdges()
 	{
 		if (this._numEdgesIsDirty)
 		{
 			this._numEdges = 0; 
-			for(var currentStartVert = 0; currentStartVert < this._edges[0].length; currentStartVert++)
+			for(var currentStartVertIdx = 0; currentStartVertIdx < this._edges[0].length; currentStartVertIdx++)
 			{
-				for (var currentEndVert = (currentStartVert + 1); currentEndVert < this._edges[0].length; currentEndVert++)
+				for (var currentEndVertIdx = (currentStartVertIdx + 1); currentEndVertIdx < this._edges[0].length; currentEndVertIdx++)
 				{
-					if (this._edges[currentStartVert][currentEndVert] != null)
+					if (this.getEdge(currentStartVertIdx, currentEndVertIdx) != null)
 					{
 						this._numEdges++;
 					}
@@ -302,13 +321,13 @@ class mesh
 				console.log("[mesh][getInverseEdge] ERROR: Received an edge with a null vertex");
 				console.log(currentEdge);
 			}
-			else if (this._edges[currentEdge._vertOrigin._vertIndex][currentEdge._vertDest._vertIndex] == null)
+			else if (this.getEdge(currentEdge._vertOrigin._vertIndex, currentEdge._vertDest._vertIndex) == null)
 			{
 				console.log("[mesh][getInverseEdge] ERROR: Edge table is null at the location of the received edge: " + currentEdge._vertOrigin._vertIndex + " -> " + currentEdge._vertDest._vertIndex);
 			} 
 		}		
 
-		return this._edges[currentEdge._vertDest._vertIndex][currentEdge._vertOrigin._vertIndex];
+		return this.getEdge(currentEdge._vertDest._vertIndex, currentEdge._vertOrigin._vertIndex);
 	}
 
 
@@ -318,7 +337,7 @@ class mesh
 		var currentCount = 0;
 		for (var currentCol = 0; currentCol < this._edges[0].length; currentCol++)
 		{
-			if (this._edges[vertexIndex][currentCol] != null)
+			if (this.getEdge(vertexIndex, currentCol) != null)
 			{
 				currentCount++;
 			}			
@@ -342,7 +361,7 @@ class mesh
 				var currentCount = 0;
 				for (var currentCol = 0; currentCol < this._edges[0].length; currentCol++)
 				{
-					if (this._edges[currentRow][currentCol] != null)	//  Note: _edges[currentRow][currentCol] == null
+					if (this.getEdge(currentRow, currentCol) != null)	//  Note: _edges[i][i] == null, always
 					{
 						currentCount++;
 					}
@@ -366,16 +385,17 @@ class mesh
 		for (var currentVert = 0; currentVert < this._edges[0].length; currentVert++)
 		{
 			// Walk the vertexIndex row: Check edges starting at the received vertexIndex -> neighbor:
-			if (this._edges[vertexIndex][currentVert] != null)
+			var currentEdge = this.getEdge(vertexIndex, currentVert);
+			if (currentEdge != null)
 			{
 				// Handle bi-directional edges: Only push neighbors, not the target vertex:
-				if(this._edges[vertexIndex][currentVert]._vertOrigin._vertIndex == vertexIndex)
+				if(currentEdge._vertOrigin._vertIndex == vertexIndex)
 				{
-					neighbors.push(this._edges[vertexIndex][currentVert]._vertDest);
+					neighbors.push(currentEdge._vertDest);
 				}
 				else
 				{
-					neighbors.push(this._edges[vertexIndex][currentVert]._vertOrigin);
+					neighbors.push(currentEdge._vertOrigin);
 				}
 			}
 		}
@@ -412,19 +432,19 @@ class mesh
 		var destVertIndex 	= candidateEdge._vertDest._vertIndex;
 
 		// If the edge doesn't exist, add it and its inverse to the edges table:
-		if(this._edges[originVertIndex][destVertIndex] == null)
+		var currentEdge = this.getEdge(originVertIndex, destVertIndex);
+		if(currentEdge == null)
 		{
-			this._edges[originVertIndex][destVertIndex] = candidateEdge;
+			this.addEdge(candidateEdge);
 
 			var inverseEdge = new edge(candidateEdge._vertDest, candidateEdge._vertOrigin);
-
-			this._edges[destVertIndex][originVertIndex] = inverseEdge;
+			this.addEdge(inverseEdge);
 
 			// Mark the edges table as dirty:
 			this._numEdgesIsDirty = true;
 		}
 
-		return this._edges[originVertIndex][destVertIndex];
+		return this.getEdge(originVertIndex, destVertIndex);
 	}
 
 
@@ -697,7 +717,7 @@ class mesh
 				var originVertIndex = newFaceEdges[currentEdge]._vertOrigin._vertIndex;
 				var destVertIndex 	= newFaceEdges[currentEdge]._vertDest._vertIndex;
 
-				var inverseEdge 	= this._edges[destVertIndex][originVertIndex];
+				var inverseEdge 	= this.getEdge(destVertIndex, originVertIndex);
 
 				// Update pointers for the current face and its edges:
 				newFaceEdges[currentEdge]._faceLeft = newFace;
@@ -1119,9 +1139,9 @@ class mesh
 
 				// Detect edges that cross over, and would cause an invalid fins/non-manifold geometry. At most, the selectedEdge origin/dest vertices should be shared by 2 faces
 				var numSharedFaces = 0;
-				for (var currentVert = 0; currentVert < this._edges[0].length; currentVert++)
+				for (var currentVertIdx = 0; currentVertIdx < this._edges[0].length; currentVertIdx++)
 				{
-					if (this._edges[selectedEdge._vertOrigin._vertIndex][currentVert] != null && this._edges[selectedEdge._vertDest._vertIndex][currentVert] != null)
+					if (this.getEdge(selectedEdge._vertOrigin._vertIndex, currentVertIdx) != null && this.getEdge(selectedEdge._vertDest._vertIndex, currentVertIdx) != null)
 					{
 						numSharedFaces++;
 
@@ -1231,8 +1251,8 @@ class mesh
 					botRightEdge._edgeLeftCW	= invInnerEdge;
 
 					// Remove the surviving edge from its current location in the edge table:
-					this._edges[innerEdge._vertOrigin._vertIndex][innerEdge._vertDest._vertIndex] 		= null;
-					this._edges[invInnerEdge._vertOrigin._vertIndex][invInnerEdge._vertDest._vertIndex] = null;
+					this.removeEdge(innerEdge._vertOrigin._vertIndex, innerEdge._vertDest._vertIndex);
+					this.removeEdge(invInnerEdge._vertOrigin._vertIndex, invInnerEdge._vertDest._vertIndex);
 
 					// Update the surviving edge vertices:
 					innerEdge._vertOrigin 	= selectedEdge._vertOrigin;
@@ -1241,8 +1261,8 @@ class mesh
 					// Update the vert -> edge pointer:
 					innerEdge._vertOrigin._edge = innerEdge;
 
-					this._edges[innerEdge._vertOrigin._vertIndex][innerEdge._vertDest._vertIndex]		= innerEdge;
-					this._edges[invInnerEdge._vertOrigin._vertIndex][invInnerEdge._vertDest._vertIndex] = invInnerEdge;
+					this.addEdge(innerEdge);
+					this.addEdge(invInnerEdge);
 
 					// Delete the deprecated inner faces:
 					this._faces[innerEdge._faceLeft._faceIndex] 	= null;
@@ -1270,11 +1290,11 @@ class mesh
 					selectedEdge._faceRight._edge 	= invInnerEdge;
 
 					// Delete the deprecated edges:
-					this._edges[deprecatedLeftEdge._vertOrigin._vertIndex][deprecatedLeftEdge._vertDest._vertIndex] = null;
-					this._edges[deprecatedLeftEdge._vertDest._vertIndex][deprecatedLeftEdge._vertOrigin._vertIndex] = null;
+					this.removeEdge(deprecatedLeftEdge._vertOrigin._vertIndex, deprecatedLeftEdge._vertDest._vertIndex);
+					this.removeEdge(deprecatedLeftEdge._vertDest._vertIndex, deprecatedLeftEdge._vertOrigin._vertIndex);
 
-					this._edges[deprecatedRightEdge._vertOrigin._vertIndex][deprecatedRightEdge._vertDest._vertIndex] = null;
-					this._edges[deprecatedRightEdge._vertDest._vertIndex][deprecatedRightEdge._vertOrigin._vertIndex] = null;
+					this.removeEdge(deprecatedRightEdge._vertOrigin._vertIndex, deprecatedRightEdge._vertDest._vertIndex);
+					this.removeEdge(deprecatedRightEdge._vertDest._vertIndex, deprecatedRightEdge._vertOrigin._vertIndex);
 
 					currentEdgeCount -= 2;	// Decrement by the number of 1-way edges removed
 				}
@@ -1344,11 +1364,11 @@ class mesh
 					rightInnerEdge._edgeLeftCW		= topRightEdge;
 
 					// Update the edge table:
-					this._edges[leftInnerEdge._vertOrigin._vertIndex][leftInnerEdge._vertDest._vertIndex] 		= null;
-					this._edges[invLeftInnerEdge._vertOrigin._vertIndex][invLeftInnerEdge._vertDest._vertIndex] = null;
+					this.removeEdge(leftInnerEdge._vertOrigin._vertIndex, leftInnerEdge._vertDest._vertIndex);
+					this.removeEdge(invLeftInnerEdge._vertOrigin._vertIndex, invLeftInnerEdge._vertDest._vertIndex);
 
-					this._edges[rightInnerEdge._vertOrigin._vertIndex][rightInnerEdge._vertDest._vertIndex] 		= null;
-					this._edges[invRightInnerEdge._vertOrigin._vertIndex][invRightInnerEdge._vertDest._vertIndex] 	= null;
+					this.removeEdge(rightInnerEdge._vertOrigin._vertIndex, rightInnerEdge._vertDest._vertIndex);
+					this.removeEdge(invRightInnerEdge._vertOrigin._vertIndex, invRightInnerEdge._vertDest._vertIndex);
 
 					// Replace the verts:
 					leftInnerEdge._vertOrigin 		= selectedEdge._vertOrigin;
@@ -1361,11 +1381,11 @@ class mesh
 					leftInnerEdge._vertOrigin._edge = leftInnerEdge;
 
 					// Reinsert into the edge table:
-					this._edges[leftInnerEdge._vertOrigin._vertIndex][leftInnerEdge._vertDest._vertIndex] 			= leftInnerEdge;
-					this._edges[invLeftInnerEdge._vertOrigin._vertIndex][invLeftInnerEdge._vertDest._vertIndex] 	= invLeftInnerEdge;
+					this.addEdge(leftInnerEdge);
+					this.addEdge(invLeftInnerEdge);
 
-					this._edges[rightInnerEdge._vertOrigin._vertIndex][rightInnerEdge._vertDest._vertIndex] 		= rightInnerEdge;
-					this._edges[invRightInnerEdge._vertOrigin._vertIndex][invRightInnerEdge._vertDest._vertIndex] 	= invRightInnerEdge;
+					this.addEdge(rightInnerEdge);
+					this.addEdge(invRightInnerEdge);
 
 
 					// if (DEBUG_ENABLED)
@@ -1420,11 +1440,11 @@ class mesh
 					// Don't need to update topCenterEdge
 
 					// Delete the deprecated edges:
-					this._edges[botLeftDeprecatedEdge._vertOrigin._vertIndex][botLeftDeprecatedEdge._vertDest._vertIndex] 	= null;
-					this._edges[botLeftDeprecatedEdge._vertDest._vertIndex][botLeftDeprecatedEdge._vertOrigin._vertIndex] 	= null;
+					this.removeEdge(botLeftDeprecatedEdge._vertOrigin._vertIndex, botLeftDeprecatedEdge._vertDest._vertIndex);
+					this.removeEdge(botLeftDeprecatedEdge._vertDest._vertIndex, botLeftDeprecatedEdge._vertOrigin._vertIndex);
 					
-					this._edges[botRightDeprecatedEdge._vertOrigin._vertIndex][botRightDeprecatedEdge._vertDest._vertIndex] = null;
-					this._edges[botRightDeprecatedEdge._vertDest._vertIndex][botRightDeprecatedEdge._vertOrigin._vertIndex] = null;
+					this.removeEdge(botRightDeprecatedEdge._vertOrigin._vertIndex, botRightDeprecatedEdge._vertDest._vertIndex);
+					this.removeEdge(botRightDeprecatedEdge._vertDest._vertIndex, botRightDeprecatedEdge._vertOrigin._vertIndex);
 
 					currentEdgeCount -= 2;	// Decrement by the number of 1-way edges removed
 				}
@@ -1461,18 +1481,18 @@ class mesh
 					var vertNeighbors = this.getVertexNeighbors(selectedEdge._vertDest._vertIndex);
 					for (var currentVert = 0; currentVert < vertNeighbors.length; currentVert++)
 					{
-						if (	this._edges[selectedEdge._vertDest._vertIndex][vertNeighbors[currentVert]._vertIndex] != leftDeprecatedEdge &&
-								this._edges[vertNeighbors[currentVert]._vertIndex][selectedEdge._vertDest._vertIndex] != rightDeprecatedEdge &&
-								vertNeighbors[currentVert]._vertIndex != selectedEdge._vertOrigin._vertIndex
+						if (this.getEdge(selectedEdge._vertDest._vertIndex, vertNeighbors[currentVert]._vertIndex) != leftDeprecatedEdge &&
+							this.getEdge(vertNeighbors[currentVert]._vertIndex, selectedEdge._vertDest._vertIndex) != rightDeprecatedEdge &&
+							vertNeighbors[currentVert]._vertIndex != selectedEdge._vertOrigin._vertIndex
 						)
 						{
 							// Retrieve the edge references:
-							var currentEdge 	= this._edges[selectedEdge._vertDest._vertIndex][vertNeighbors[currentVert]._vertIndex];
+							var currentEdge 	= this.getEdge(selectedEdge._vertDest._vertIndex, vertNeighbors[currentVert]._vertIndex);
 							var invCurrentEdge 	= this.getInverseEdge(currentEdge);
 
 							// Remove the existing edges from the table:
-							this._edges[currentEdge._vertOrigin._vertIndex][currentEdge._vertDest._vertIndex] 		= null;
-							this._edges[invCurrentEdge._vertOrigin._vertIndex][invCurrentEdge._vertDest._vertIndex] = null;
+							this.removeEdge(currentEdge._vertOrigin._vertIndex, currentEdge._vertDest._vertIndex);
+							this.removeEdge(invCurrentEdge._vertOrigin._vertIndex, invCurrentEdge._vertDest._vertIndex);
 
 							// Update the vertices:
 							currentEdge._vertOrigin 	= selectedEdge._vertOrigin;
@@ -1480,16 +1500,16 @@ class mesh
 
 
 							// Check: Is there already an edge where we're about to assemble one?
-							if (this._edges[selectedEdge._vertOrigin._vertIndex][currentEdge._vertDest._vertIndex] != null ||		// SelectedEdge's origin -> neighbor vert
-								this._edges[invCurrentEdge._vertOrigin._vertIndex][selectedEdge._vertOrigin._vertIndex] != null		// Neighbor vert -> selectedEdge's origin
+							if (this.getEdge(selectedEdge._vertOrigin._vertIndex, currentEdge._vertDest._vertIndex) != null ||		// SelectedEdge's origin -> neighbor vert
+								this.getEdge(invCurrentEdge._vertOrigin._vertIndex, selectedEdge._vertOrigin._vertIndex) != null	// Neighbor vert -> selectedEdge's origin
 								)
 							{
 								// NOTE: This is a safety check for a bug that no longer occurs. Leaving it here as a precaution only.
 								console.log("ERROR: Found an existing edge in the table: " + selectedEdge._vertOrigin._vertIndex + ", " + currentEdge._vertDest._vertIndex);
 
 								// Hail mary: Attempt to reconnect the edge flow:
-								var existingForwardEdge = this._edges[selectedEdge._vertOrigin._vertIndex][currentEdge._vertDest._vertIndex];
-								var existingInverseEdge = this._edges[invCurrentEdge._vertOrigin._vertIndex][selectedEdge._vertOrigin._vertIndex];
+								var existingForwardEdge = this.getEdge(selectedEdge._vertOrigin._vertIndex, currentEdge._vertDest._vertIndex);
+								var existingInverseEdge = this.getEdge(invCurrentEdge._vertOrigin._vertIndex, selectedEdge._vertOrigin._vertIndex);
 
 								currentEdge._edgeLeftCW._edgeLeftCCW = existingForwardEdge;
 								currentEdge._edgeLeftCCW._edgeLeftCW = existingForwardEdge;
@@ -1501,8 +1521,8 @@ class mesh
 							}
 
 							// Insert the updated edges back into the table:
-							this._edges[currentEdge._vertOrigin._vertIndex][currentEdge._vertDest._vertIndex] 		= currentEdge;
-							this._edges[invCurrentEdge._vertOrigin._vertIndex][invCurrentEdge._vertDest._vertIndex] = invCurrentEdge;
+							this.addEdge(currentEdge);
+							this.addEdge(invCurrentEdge);
 
 							// Update face normals:
 							currentEdge._faceLeft.computeFaceNormal(false);
@@ -1556,11 +1576,11 @@ class mesh
 					selectedEdge._faceRight._edge 	= botRightEdge;
 
 					// Delete the deprecated edges:
-					this._edges[leftDeprecatedEdge._vertOrigin._vertIndex][leftDeprecatedEdge._vertDest._vertIndex] = null;
-					this._edges[leftDeprecatedEdge._vertDest._vertIndex][leftDeprecatedEdge._vertOrigin._vertIndex] = null;
+					this.removeEdge(leftDeprecatedEdge._vertOrigin._vertIndex, leftDeprecatedEdge._vertDest._vertIndex);
+					this.removeEdge(leftDeprecatedEdge._vertDest._vertIndex, leftDeprecatedEdge._vertOrigin._vertIndex);
 
-					this._edges[rightDeprecatedEdge._vertOrigin._vertIndex][rightDeprecatedEdge._vertDest._vertIndex] = null;
-					this._edges[rightDeprecatedEdge._vertDest._vertIndex][rightDeprecatedEdge._vertOrigin._vertIndex] = null;
+					this.removeEdge(rightDeprecatedEdge._vertOrigin._vertIndex, rightDeprecatedEdge._vertDest._vertIndex);
+					this.removeEdge(rightDeprecatedEdge._vertDest._vertIndex, rightDeprecatedEdge._vertOrigin._vertIndex);
 
 					currentEdgeCount -= 2;	// Decrement by the number of 1-way edges removed
 				}
@@ -1572,8 +1592,8 @@ class mesh
 				if (destVertDegree != 3)	// If the dest degree is 3, we've already done this
 				{
 					// Delete the selected edge:
-					this._edges[selectedEdge._vertOrigin._vertIndex][selectedEdge._vertDest._vertIndex] = null;
-					this._edges[selectedEdge._vertDest._vertIndex][selectedEdge._vertOrigin._vertIndex] = null;		
+					this.removeEdge(selectedEdge._vertOrigin._vertIndex, selectedEdge._vertDest._vertIndex);
+					this.removeEdge(selectedEdge._vertDest._vertIndex, selectedEdge._vertOrigin._vertIndex);
 					currentEdgeCount -= 1;	// Decrement by the number of 1-way edges removed
 
 					// Finally, delete the inner vertex:
@@ -1666,15 +1686,15 @@ class mesh
 		this.getInverseEdge(backEdge)._faceRight 	= selectedEdge._faceLeft;
 
 		// Delete the selected edge:
-		this._edges[selectedOriginIdx][selectedDestIdx] = null;
-		this._edges[selectedDestIdx][selectedOriginIdx] = null;
+		this.removeEdge(selectedOriginIdx, selectedDestIdx);
+		this.removeEdge(selectedDestIdx, selectedOriginIdx);
 		
 		// Delete the deprecated edges:
-		this._edges[deprecatedLeftEdge._vertOrigin._vertIndex][deprecatedLeftEdge._vertDest._vertIndex] = null;
-		this._edges[deprecatedLeftEdge._vertDest._vertIndex][deprecatedLeftEdge._vertOrigin._vertIndex] = null;
+		this.removeEdge(deprecatedLeftEdge._vertOrigin._vertIndex, deprecatedLeftEdge._vertDest._vertIndex);
+		this.removeEdge(deprecatedLeftEdge._vertDest._vertIndex, deprecatedLeftEdge._vertOrigin._vertIndex);
 		
-		this._edges[deprecatedRightEdge._vertOrigin._vertIndex][deprecatedRightEdge._vertDest._vertIndex] = null;
-		this._edges[deprecatedRightEdge._vertDest._vertIndex][deprecatedRightEdge._vertOrigin._vertIndex] = null;
+		this.removeEdge(deprecatedRightEdge._vertOrigin._vertIndex, deprecatedRightEdge._vertDest._vertIndex);
+		this.removeEdge(deprecatedRightEdge._vertDest._vertIndex, deprecatedRightEdge._vertOrigin._vertIndex);
 		
 		// Finally, delete the inner vertex:
 		this._vertices[selectedDestIdx] = null;
@@ -1748,19 +1768,17 @@ class mesh
 		{
 			for (var col = 0; col < this._edges[0].length; col++)
 			{
-				if (this._edges[row][col] != null)
+				if (this.getEdge(row, col) != null)
 				{
 					if (DEBUG_ENABLED)
 					{
-						if (newEdges[ this._edges[row][col]._vertOrigin._vertIndex ][ this._edges[row][col]._vertDest._vertIndex ] != null)
+						if (newEdges[ this.getEdge(row, col)._vertOrigin._vertIndex ][ this.getEdge(row, col)._vertDest._vertIndex ] != null)
 						{
-							console.log("ERROR: newEdges already has an edge at [" + this._edges[row][col]._vertOrigin._vertIndex + "][" + this._edges[row][col]._vertDest._vertIndex + "]");
+							console.log("ERROR: newEdges already has an edge at [" + this.getEdge(row, col)._vertOrigin._vertIndex + "][" + this.getEdge(row, col)._vertDest._vertIndex + "]");
 						}
-
-						// console.log("Remapped edge (" + row + ", " + col + ") -> (" + this._edges[row][col]._vertOrigin._vertIndex + ", " + this._edges[row][col]._vertDest._vertIndex + ")");
 					}				
 
-					newEdges[ this._edges[row][col]._vertOrigin._vertIndex ][ this._edges[row][col]._vertDest._vertIndex ] = this._edges[row][col];
+					newEdges[ this.getEdge(row, col)._vertOrigin._vertIndex ][ this.getEdge(row, col)._vertDest._vertIndex ] = this.getEdge(row, col);
 				}
 			}
 		}
@@ -2052,7 +2070,7 @@ class mesh
 				newVert._edge = edge2;	// Origin vertex of edge2
 
 				// Get a pointer to the inverse of the current edge:
-				var inverseCurrentEdge = this._edges[currentEdge._vertDest._vertIndex][currentEdge._vertOrigin._vertIndex];
+				var inverseCurrentEdge = this.getEdge(currentEdge._vertDest._vertIndex, currentEdge._vertOrigin._vertIndex);
 				
 				// Add pointers to the child edges (in CCW order) so we can find them later:
 				currentEdge._children 			= [edge1, edge2];
@@ -2221,7 +2239,7 @@ class mesh
 			vec3.scale(newVertPosition, theRegularVert._position, THREE_OVER_EIGHT);		
 
 			// S2: Find the "center" edge:
-			var toExtraordinary = this._edges[theRegularVert._vertIndex][theIrregularVert._vertIndex];
+			var toExtraordinary = this.getEdge(theRegularVert._vertIndex, theIrregularVert._vertIndex);
 
 			var weightedNeighbors = vec3.create();
 			vec3.scale(weightedNeighbors, this.getInverseEdge(toExtraordinary._edgeLeftCCW)._edgeLeftCCW._vertDest._position, NEG_ONE_OVER_EIGHT);
@@ -2256,7 +2274,7 @@ class mesh
 				totalWeights += weight;
 
 				// Find the correct neighbor:
-				var toExtraordinary 		= this._edges[theRegularVert._vertIndex][theIrregularVert._vertIndex];
+				var toExtraordinary 		= this.getEdge(theRegularVert._vertIndex, theIrregularVert._vertIndex);
 				var inverseToExtraordinary 	= this.getInverseEdge(toExtraordinary);
 
 				var toNeighbor = this.getInverseEdge(inverseToExtraordinary._edgeLeftCW);
@@ -2659,10 +2677,10 @@ class mesh
 		{
 			for (var col = 0; col < this._edges[0].length; col++)
 			{
-				if (this._edges[row][col] != null)
+				if (this.getEdge(row, col) != null)
 				{
-					vertCount[ this._edges[row][col]._vertOrigin._vertIndex ] 	= 1;
-					vertCount[ this._edges[row][col]._vertDest._vertIndex ] 	= 1;
+					vertCount[ this.getEdge(row, col)._vertOrigin._vertIndex ] 	= 1;
+					vertCount[ this.getEdge(row, col)._vertDest._vertIndex ] 	= 1;
 				}
 			}
 		}
@@ -2695,15 +2713,15 @@ class mesh
 		{
 			for (var col = 0; col < this._edges[0].length; col++)
 			{
-				if (this._edges[row][col] != null)
+				if (this.getEdge(row, col) != null)
 				{
-					if (this._edges[row][col]._vertOrigin != this._vertices[ this._edges[row][col]._vertOrigin._vertIndex ])
+					if (this.getEdge(row, col)._vertOrigin != this._vertices[ this.getEdge(row, col)._vertOrigin._vertIndex ] )
 					{
 						console.log("ERROR: Edge has a origin vertex reference that does not match the vertex table");
 						DEBUG_ERROR_HAS_OCCURRED = true;
 					}
 
-					if (this._edges[row][col]._vertDest != this._vertices[ this._edges[row][col]._vertDest._vertIndex ])
+					if (this.getEdge(row, col)._vertDest != this._vertices[ this.getEdge(row, col)._vertDest._vertIndex ] )
 					{
 						console.log("ERROR: Edge has a dest vertex reference that does not match the vertex table");
 						DEBUG_ERROR_HAS_OCCURRED = true;
@@ -2754,18 +2772,18 @@ class mesh
 		{
 			for (var col = 0; col < this._edges[0].length; col++)
 			{
-				if (this._edges[row][col] != edgeParity[row][col])
+				if (this.getEdge(row, col) != edgeParity[row][col])
 				{
 					console.log("ERROR: Walking the face edges produces a different edge table: row = " + row + ", col = " + col);
 					DEBUG_ERROR_HAS_OCCURRED = true;
 
-					if (this._edges[row][col] == null)
+					if (this.getEdge(row, col) == null)
 					{
 						console.log("Edge table reference is null");
 					}
 					else
 					{
-						console.log("Edge table: " + this._edges[row][col]._vertOrigin._vertIndex + " -> " + this._edges[row][col]._vertDest._vertIndex);
+						console.log("Edge table: " + this.getEdge(row, col)._vertOrigin._vertIndex + " -> " + this.getEdge(row, col)._vertDest._vertIndex);
 					}
 
 					if (edgeParity[row][col] == null)
@@ -2839,16 +2857,16 @@ class mesh
 					DEBUG_ERROR_HAS_OCCURRED = true;
 				}
 
-				if (this._edges[cur._vertOrigin._vertIndex][cur._vertDest._vertIndex] == null)
+				if (this.getEdge(cur._vertOrigin._vertIndex, cur._vertDest._vertIndex) == null)
 				{
 					console.log("ERROR: Face " + currentFace + " has a FORWARD edge (count = " + count + ")  not in the edges table: " + cur._vertOrigin._vertIndex + " -> " + cur._vertDest._vertIndex);
 					console.log(cur);
-					console.log(this._edges[cur._vertOrigin._vertIndex][cur._vertDest._vertIndex]);
+					console.log(this.getEdge(cur._vertOrigin._vertIndex, cur._vertDest._vertIndex));
 					// console.log(this._edges);
 					DEBUG_ERROR_HAS_OCCURRED = true;
 				}
 
-				if (this._edges[cur._vertDest._vertIndex][cur._vertOrigin._vertIndex] == null)
+				if (this.getEdge(cur._vertDest._vertIndex, cur._vertOrigin._vertIndex) == null)
 				{
 					console.log("ERROR: Face " + currentFace + " has a INVERSE edge not in the edges table: " + cur._vertDest._vertIndex + " -> " + cur._vertOrigin._vertIndex);
 					console.log(cur);
@@ -2856,18 +2874,18 @@ class mesh
 					DEBUG_ERROR_HAS_OCCURRED = true;
 				}
 
-				if (this._edges[cur._vertOrigin._vertIndex][cur._vertDest._vertIndex] != cur)
+				if (this.getEdge(cur._vertOrigin._vertIndex, cur._vertDest._vertIndex) != cur)
 				{
 					console.log("ERROR: Face " + currentFace + " has a FORWARD edge reference (count = " + count + ") that is out of sync with the edge table reference. Cur pointer = " + cur._vertOrigin._vertIndex + " -> " + cur._vertDest._vertIndex);
 					console.log(cur);
-					console.log(this._edges[cur._vertOrigin._vertIndex][cur._vertDest._vertIndex]);
-					console.log("Edge table = " + this._edges[cur._vertOrigin._vertIndex][cur._vertDest._vertIndex]._vertOrigin._vertIndex + " -> " + this._edges[cur._vertOrigin._vertIndex][cur._vertDest._vertIndex]._vertDest._vertIndex);
+					console.log(this.getEdge(cur._vertOrigin._vertIndex, cur._vertDest._vertIndex) );
+					console.log("Edge table = " + this.getEdge(cur._vertOrigin._vertIndex, cur._vertDest._vertIndex)._vertOrigin._vertIndex + " -> " + this.getEdge(cur._vertOrigin._vertIndex, cur._vertDest._vertIndex)._vertDest._vertIndex);
 					console.log(cur);
 					// console.log(this._edges);
 					DEBUG_ERROR_HAS_OCCURRED = true;
 				}
 
-				if (this._edges[cur._vertDest._vertIndex][cur._vertOrigin._vertIndex] != this.getInverseEdge(cur))
+				if (this.getEdge(cur._vertDest._vertIndex, cur._vertOrigin._vertIndex) != this.getInverseEdge(cur))
 				{
 					console.log("ERROR: Face " + currentFace + " has a INVERSE edge reference that is out of sync with the edge table: " + cur._vertDest._vertIndex + " -> " + cur._vertOrigin._vertIndex);
 					console.log(cur);
@@ -2942,9 +2960,9 @@ class mesh
 		{
 			for (var col = 0; col < this._edges[0].length; col++)
 			{
-				if (this._edges[row][col] == null && this._edges[col][row] != null)
+				if (this.getEdge(row, col) == null && this.getEdge(col, row) != null)
 				{
-					console.log("EDGE TABLE MISMATCH DETECTED ["+ row + "][" + col + "]!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ");
+					console.log("Edge table mismatch detected: ["+ row + "][" + col + "]");
 					console.log(this._edges);
 					DEBUG_ERROR_HAS_OCCURRED = true;
 				}
@@ -3035,9 +3053,9 @@ class mesh
 		{
 			for (var col = 0; col < this._edges[0].length; col++)
 			{
-				if (this._edges[row][col] != null)
+				if (this.getEdge(row, col) != null)
 				{
-					console.log("Edges[" + row + "][" + col + "] = " + this._edges[row][col]._vertOrigin._vertIndex +  ", " + this._edges[row][col]._vertDest._vertIndex);
+					console.log("Edges[" + row + "][" + col + "] = " + this.getEdge(row, col)._vertOrigin._vertIndex +  ", " + this.getEdge(row, col)._vertDest._vertIndex);
 				}				
 			}
 		}

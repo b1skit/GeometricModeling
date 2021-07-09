@@ -1,12 +1,10 @@
 // Main program logic
 
-// CMPT 764 Assignment 1/2
+// Geometric Modeling
 // by Adam Badke
-// SFU Student #301310785
-// abadke@sfu.ca
+// adambadke@gmail.com
 
-// The following resources were consulted during the creation of this assignment:
-// - Assignment 1: Provided demo code
+// The following resources were consulted during the creation of this project:
 // - https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Tutorial/Getting_started_with_WebGL
 // - Winged Edge reference material:
 //		https://en.wikipedia.org/wiki/Winged_edge#:~:text=In%20computer%20graphics%2C%20the%20winged,edge%20records%2C%20and%20face%20records.

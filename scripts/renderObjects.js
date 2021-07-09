@@ -1,9 +1,8 @@
 // renderable objects: Things that are rendered in a scene
 
-// CMPT 764 Assignment 1
+// Geometric Modeling
 // by Adam Badke
-// SFU Student #301310785
-// abadke@sfu.ca
+// adambadke@gmail.com
 
 
 

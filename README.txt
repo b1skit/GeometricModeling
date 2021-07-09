@@ -1,10 +1,10 @@
-CMPT 764 Assignment 2
+Geometric Modeling
 by Adam Badke
-SFU student #301310785
-abadke@sfu.ca
+adambadke@gmail.com
 
-The following resources were consulted during the creation of this assignment:
-- Assignment 1 demo code
+This code was developed and tested using the Chrome browser with Windows 10. It also has been verified to work with the Windows Edge browser.
+
+The following resources were consulted during the creation of this project:
 - WebGL tutorial:
 	- https://developer.mozilla.org/en-us/docs/web/api/webgl_api/tutorial/getting_started_with_webgl
 - Winged edge reference material:
@@ -14,13 +14,6 @@ The following resources were consulted during the creation of this assignment:
  - Edge decimation papers:
 		http://mgarland.org/files/papers/quadrics.pdf
 		http://www.graphics.rwth-aachen.de/media/papers/mcd_vmv021.pdf
-
-
-All requested features were implemented.
-
-
-This code was developed and tested using the Chrome browser with Windows 10. It also has been verified to work with the Windows Edge browser.
-If you have any issues running this code please contact me!
 
 
 
@@ -42,5 +35,15 @@ Unfortunately, I noticed the Arm hand model (25,000 verts - https://www.cs.sfu.c
 
 I have done significant testing, and I believe this is an issue with the browser and my data structures, not a bug in the logic of my code. All of the other meshes provided in assignment 1 and 2 work perfectly. Additionally, subdivided meshes can also be decimated. The issue is due to my use of a 2D table to store edges. This table becomes very large for meshes with a large number of vertices.
 
-Had I realized this would be a problem, I would have chosen a different data structure (such as a hash map) to store edges. Alas, the 2D table worked fine for assignment #1 and for smaller meshes tested for this assignment #2 implementation. By the time I realized the issue, it was too late to change. I hope you understand! :)
+Had I realized this would be a problem, I would have chosen a different data structure (such as a hash map) to store edges.
 
+
+TODO:
+-----
+- BUG: Seems that subdividing, decimating, subdivding, and decimating again causes the mesh to collapse in on itself
+	-> Check before submitting my current changes... Did I introduce this?
+	-> Suspect I'm forgetting to initialize quadrics (or incorrectly reinitializing them?)
+
+- BUG: Exponential runtime causes crashes on large meshes
+	-> Switch to using a hash map instead of a 2D table
+		-> Start by replacing all table accesses with a function
