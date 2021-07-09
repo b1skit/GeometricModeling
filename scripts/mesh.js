@@ -261,6 +261,22 @@ class mesh
     }
 
 
+	// (Re)Allocate an empty edge table
+	allocateEdgeTable(numVerts)
+	{
+		// 2D edge table:
+		this._edges 	= [];
+		for (var currentRow = 0; currentRow < numVerts; currentRow++)
+		{
+			this._edges.push(new Array());
+			for (var currentCol = 0; currentCol < numVerts; currentCol++)
+			{
+				this._edges[currentRow].push(null);
+			}
+		}
+	}
+
+
 	// Get an directed edge from our edge table
 	// Note: Returned edge may be null
 	getEdge(originVertIndex, destVertIndex)
@@ -632,16 +648,9 @@ class mesh
 		{
 			this._vertices.push(null);	// Pre-allocate the vertices array
 		}
-		// 2D edge table:
-		this._edges 	= [];
-		for (var currentRow = 0; currentRow < extractedVerts.length; currentRow++)
-		{
-			this._edges.push(new Array());
-			for (var currentCol = 0; currentCol < extractedVerts.length; currentCol++)
-			{
-				this._edges[currentRow].push(null);
-			}
-		}
+
+		// Allocate a 2D edge table:
+		this.allocateEdgeTable(extractedVerts.length);
 
 		this._faces 	= [];
 
@@ -801,9 +810,9 @@ class mesh
 
 
 	// Initialize the mesh's faces with an error quadric:
-	computeFaceAndVertexQuadrics(force = false)
+	computeFaceAndVertexQuadrics()
 	{
-		if (this._errorQuadricsAreComputed == true && !force)
+		if (this._errorQuadricsAreComputed == true)
 		{
 			return;
 		}
@@ -966,7 +975,7 @@ class mesh
 
 
 		// Initialize the error planes for the mesh:
-		this.computeFaceAndVertexQuadrics();	// Note: This only actually computes once at the beginning
+		this.computeFaceAndVertexQuadrics();	// Note: This executes once at the beginning, or again if we've since subdivided
 
 		var DEBUG_EDGE_SEQUENCE = "";	// DEBUG: Keep a track of the edge sequence so we can reconstruct it
 		
@@ -1749,40 +1758,33 @@ class mesh
 				// }
 			}					
 		}
-		var prevNumVerts = this._vertices.length;
-		this._vertices 	= newVerts;
-		
-		// Allocate a new edge table:
-		var newEdges = [];
-		for (var currentRow = 0; currentRow < this._vertices.length; currentRow++)
-		{
-			newEdges.push(new Array());
-			for (var currentCol = 0; currentCol < this._vertices.length; currentCol++)
-			{
-				newEdges[currentRow].push(null);
-			}
-		}
+		var prevNumVerts 	= this._vertices.length;
+		this._vertices 		= newVerts;
 
-		// Repack the edge table according to the updated vertex indexes:
+		// Cache off the current edge table:
+		var currentEdges = this._edges;
+
+		// Allocate a new edge table with the new number of vertices:
+		this.allocateEdgeTable(this._vertices.length);
+
+		// Repack the new edge table according to the updated vertex indexes:
 		for (var row = 0; row < prevNumVerts; row++)
 		{
 			for (var col = 0; col < prevNumVerts; col++)
 			{
-				if (this.getEdge(row, col) != null)
+				if (currentEdges[row][col] != null)
 				{
 					if (DEBUG_ENABLED)
 					{
-						if (newEdges[ this.getEdge(row, col)._vertOrigin._vertIndex ][ this.getEdge(row, col)._vertDest._vertIndex ] != null)
+						if (this.getEdge(row, col) != null)
 						{
-							console.log("ERROR: newEdges already has an edge at [" + this.getEdge(row, col)._vertOrigin._vertIndex + "][" + this.getEdge(row, col)._vertDest._vertIndex + "]");
+							console.log("ERROR: New edge table already has an edge at [" + row + "][" + col + "]");
 						}
 					}				
-
-					newEdges[ this.getEdge(row, col)._vertOrigin._vertIndex ][ this.getEdge(row, col)._vertDest._vertIndex ] = this.getEdge(row, col);
+					this.addEdge( currentEdges[row][col] );
 				}
 			}
 		}
-		this._edges 	= newEdges;
 
 		this._numEdgesIsDirty 		= true;
 		this._vertexDegreesAreDirty = true;
@@ -2189,7 +2191,9 @@ class mesh
 		this._vertices 	= newVerts;
 
 		this._vertexDegreesAreDirty 	= true;		// Mark the vertex degree count as dirty to ensure we recalculate the degrees
-		this._numEdgesIsDirty 		= true;		// Mark the edges table as dirty
+		this._numEdgesIsDirty 			= true;		// Mark the edges table as dirty
+
+		this._errorQuadricsAreComputed 	= false; 	// We've added new vertices, so we potentially need to recompute error Quadrics
 
 		// Compute smooth normals:
 		this.computeSmoothNormals();
@@ -2962,7 +2966,7 @@ class mesh
 				if (this.getEdge(row, col) == null && this.getEdge(col, row) != null)
 				{
 					console.log("Edge table mismatch detected: ["+ row + "][" + col + "]");
-					console.log(this._edges);
+					// console.log(this._edges);
 					DEBUG_ERROR_HAS_OCCURRED = true;
 				}
 			}
