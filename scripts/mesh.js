@@ -288,9 +288,9 @@ class mesh
 		if (this._numEdgesIsDirty)
 		{
 			this._numEdges = 0; 
-			for(var currentStartVertIdx = 0; currentStartVertIdx < this._edges[0].length; currentStartVertIdx++)
+			for(var currentStartVertIdx = 0; currentStartVertIdx < this._vertices.length; currentStartVertIdx++)
 			{
-				for (var currentEndVertIdx = (currentStartVertIdx + 1); currentEndVertIdx < this._edges[0].length; currentEndVertIdx++)
+				for (var currentEndVertIdx = (currentStartVertIdx + 1); currentEndVertIdx < this._vertices.length; currentEndVertIdx++)
 				{
 					if (this.getEdge(currentStartVertIdx, currentEndVertIdx) != null)
 					{
@@ -335,7 +335,7 @@ class mesh
 	countVertexDegree(vertexIndex)
 	{
 		var currentCount = 0;
-		for (var currentCol = 0; currentCol < this._edges[0].length; currentCol++)
+		for (var currentCol = 0; currentCol < this._vertices.length; currentCol++)
 		{
 			if (this.getEdge(vertexIndex, currentCol) != null)
 			{
@@ -355,11 +355,11 @@ class mesh
 			this._vertexDegree = [];
 
 			// Process each row in the edge table (one row per vertex):
-			for (var currentRow = 0; currentRow < this._edges[0].length; currentRow++)
+			for (var currentRow = 0; currentRow < this._vertices.length; currentRow++)
 			{
 				// Count the number of non-null entries in the row (each a neighbor of the vertex represented by the current row):
 				var currentCount = 0;
-				for (var currentCol = 0; currentCol < this._edges[0].length; currentCol++)
+				for (var currentCol = 0; currentCol < this._vertices.length; currentCol++)
 				{
 					if (this.getEdge(currentRow, currentCol) != null)	//  Note: _edges[i][i] == null, always
 					{
@@ -381,8 +381,7 @@ class mesh
 	getVertexNeighbors(vertexIndex)
 	{
 		var neighbors = [];
-
-		for (var currentVert = 0; currentVert < this._edges[0].length; currentVert++)
+		for (var currentVert = 0; currentVert < this._vertices.length; currentVert++)
 		{
 			// Walk the vertexIndex row: Check edges starting at the received vertexIndex -> neighbor:
 			var currentEdge = this.getEdge(vertexIndex, currentVert);
@@ -1139,7 +1138,7 @@ class mesh
 
 				// Detect edges that cross over, and would cause an invalid fins/non-manifold geometry. At most, the selectedEdge origin/dest vertices should be shared by 2 faces
 				var numSharedFaces = 0;
-				for (var currentVertIdx = 0; currentVertIdx < this._edges[0].length; currentVertIdx++)
+				for (var currentVertIdx = 0; currentVertIdx < this._vertices.length; currentVertIdx++)
 				{
 					if (this.getEdge(selectedEdge._vertOrigin._vertIndex, currentVertIdx) != null && this.getEdge(selectedEdge._vertDest._vertIndex, currentVertIdx) != null)
 					{
@@ -1750,6 +1749,7 @@ class mesh
 				// }
 			}					
 		}
+		var prevNumVerts = this._vertices.length;
 		this._vertices 	= newVerts;
 		
 		// Allocate a new edge table:
@@ -1764,9 +1764,9 @@ class mesh
 		}
 
 		// Repack the edge table according to the updated vertex indexes:
-		for (var row = 0; row < this._edges[0].length; row++)
+		for (var row = 0; row < prevNumVerts; row++)
 		{
-			for (var col = 0; col < this._edges[0].length; col++)
+			for (var col = 0; col < prevNumVerts; col++)
 			{
 				if (this.getEdge(row, col) != null)
 				{
@@ -2673,9 +2673,9 @@ class mesh
 
 			vertCount.push(0);	// Fill array with 0's
 		}
-		for (var row = 0; row < this._edges[0].length; row++)
+		for (var row = 0; row < this._vertices.length; row++)
 		{
-			for (var col = 0; col < this._edges[0].length; col++)
+			for (var col = 0; col < this._vertices.length; col++)
 			{
 				if (this.getEdge(row, col) != null)
 				{
@@ -2709,9 +2709,9 @@ class mesh
 		}
 
 		// Check the edges against the vertex table:
-		for (var row = 0; row < this._edges[0].length; row++)
+		for (var row = 0; row < this._vertices.length; row++)
 		{
-			for (var col = 0; col < this._edges[0].length; col++)
+			for (var col = 0; col < this._vertices.length; col++)
 			{
 				if (this.getEdge(row, col) != null)
 				{
@@ -2732,10 +2732,10 @@ class mesh
 
 		// Check the edges table against the face edge loops:
 		var edgeParity = [];
-		for (var currentRow = 0; currentRow < this._edges.length; currentRow++)
+		for (var currentRow = 0; currentRow < this._vertices.length; currentRow++)
 		{
 			edgeParity.push(new Array());
-			for (var currentCol = 0; currentCol < this._edges.length; currentCol++)
+			for (var currentCol = 0; currentCol < this._vertices.length; currentCol++)
 			{
 				edgeParity[currentRow].push(null);
 			}
@@ -2768,9 +2768,9 @@ class mesh
 				}
 			} while (cur != start);
 		}
-		for (var row = 0; row < this._edges[0].length; row++)
+		for (var row = 0; row < this._vertices.length; row++)
 		{
-			for (var col = 0; col < this._edges[0].length; col++)
+			for (var col = 0; col < this._vertices.length; col++)
 			{
 				if (this.getEdge(row, col) != edgeParity[row][col])
 				{
@@ -2955,10 +2955,9 @@ class mesh
 				DEBUG_ERROR_HAS_OCCURRED = true;
 			}
 		}
-
-		for (var row = 0; row < this._edges[0].length; row++)
+		for (var row = 0; row < this._vertices.length; row++)
 		{
-			for (var col = 0; col < this._edges[0].length; col++)
+			for (var col = 0; col < this._vertices.length; col++)
 			{
 				if (this.getEdge(row, col) == null && this.getEdge(col, row) != null)
 				{
@@ -3049,9 +3048,9 @@ class mesh
 		}
 
 		console.log("Printing edges:");
-		for (var row = 0; row < this._edges[0].length; row++)
+		for (var row = 0; row < this._vertices.length; row++)
 		{
-			for (var col = 0; col < this._edges[0].length; col++)
+			for (var col = 0; col < this._vertices.length; col++)
 			{
 				if (this.getEdge(row, col) != null)
 				{
