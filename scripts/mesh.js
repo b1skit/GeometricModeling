@@ -1,6 +1,6 @@
 // mesh object: Geometry contained by a renderObject
 
-// Geometric Modeling
+// Geometric Modeling: Subdivision and Decimation demo
 // by Adam Badke
 // adambadke@gmail.com
 
@@ -343,43 +343,61 @@ class mesh
 	}
 
 
-	// Helper function: Count the current degree of a single vertex
-	countVertexDegree(vertexIndex)
-	{
-		var currentCount = 0;
-		for (var currentVert = 0; currentVert < this._vertices.length; currentVert++)
-		{
-			if (this.getEdge(vertexIndex, currentVert) != null)
-			{
-				currentCount++;
-			}			
-		}
-		return currentCount;
-	}
-
-
 	// Get the number of edges connected to a vertex
 	getVertexDegree(vertexIndex)
 	{
 		if (this._vertexDegreesAreDirty == true)
-		{
-			// Initialize all degrees as 0:
+		{		
 			this._vertexDegree = [];
 			for (var currentVert = 0; currentVert < this._vertices.length; currentVert++)
 			{
-				this._vertexDegree[currentVert] = 0;
+				if (this._vertices[currentVert] != null)
+				{
+					this._vertexDegree[currentVert] = this.countVertexDegree(currentVert);
+				}
+				else
+				{
+					this._vertexDegree[currentVert] = 0;
+				}
 			}
 
-			// Check each edge in turn: Count the number of outgoing edges departing each vertex
-			for (const [key, value] of this._edges.entries())
-			{				
-				var vertIdx = parseInt( key.split(',')[0] );
-
-				this._vertexDegree[vertIdx] = this._vertexDegree[vertIdx] + 1;
-			}
+			this._vertexDegreesAreDirty = false;
 		}
 
 		return this._vertexDegree[vertexIndex];
+	}
+
+
+	// Helper function: Count the current degree of a single vertex by traversing its connected edges
+	countVertexDegree(vertexIndex)
+	{
+		var vertexEdge = this._vertices[vertexIndex]._edge;
+		if (vertexEdge._vertDest._vertIndex != vertexIndex)
+		{
+			vertexEdge = this.getInverseEdge(vertexEdge);
+		}
+
+		var count = 0;
+		var currentEdge = vertexEdge;
+		do
+		{
+			currentEdge = this.getInverseEdge(currentEdge._edgeLeftCCW);
+			count++;
+			
+		} while (currentEdge != vertexEdge);
+
+		return count;
+	}
+
+
+	// Helper function: Update the degree of an array of vertices
+	updateDegreeOfSpecificNeighbors(neighborVertexList)
+	{
+		// Update the degree count for the neighbors of the removed vertex:
+		for (var currentVert = 0; currentVert < neighborVertexList.length; currentVert++)
+		{
+			this._vertexDegree[ neighborVertexList[currentVert]._vertIndex ] = this.countVertexDegree( neighborVertexList[currentVert]._vertIndex );
+		}
 	}
 
 
@@ -388,24 +406,21 @@ class mesh
 	getVertexNeighbors(vertexIndex)
 	{
 		var neighbors = [];
-		for (var currentVert = 0; currentVert < this._vertices.length; currentVert++)
+
+		var vertexEdge = this._vertices[vertexIndex]._edge;
+		if (vertexEdge._vertDest._vertIndex != vertexIndex)
 		{
-			// Check edges starting at the received vertexIndex -> neighbor:
-			var currentEdge = this.getEdge(vertexIndex, currentVert);
-			if (currentEdge != null)
-			{
-				// Handle bi-directional edges: Only push neighbors, not the target vertex:
-				if(currentEdge._vertOrigin._vertIndex == vertexIndex)
-				{
-					neighbors.push(currentEdge._vertDest);
-				}
-				else
-				{
-					neighbors.push(currentEdge._vertOrigin);
-				}
-			}
+			vertexEdge = this.getInverseEdge(vertexEdge);
 		}
-		
+
+		var currentEdge = vertexEdge;
+		do
+		{
+			currentEdge = this.getInverseEdge(currentEdge._edgeLeftCCW);
+			neighbors.push(currentEdge._vertOrigin);
+			
+		} while (currentEdge != vertexEdge);
+
 		return neighbors;
 	}
 
@@ -962,7 +977,9 @@ class mesh
 
 
 		// Initialize the error planes for the mesh:
-		this.computeFaceAndVertexQuadrics();	// Note: This executes once at the beginning, or again if we've since subdivided
+		this.computeFaceAndVertexQuadrics();		// Note: This executes once at the beginning, or again if we've since subdivided
+
+		this._vertexDegreesAreDirty 	= true;		// Mark the vertex degree count as dirty to ensure we recalculate the degrees
 
 		var DEBUG_EDGE_SEQUENCE = "";	// DEBUG: Keep a track of the edge sequence so we can reconstruct it
 		
@@ -985,8 +1002,6 @@ class mesh
 					break;
 				}
 			}
-
-			this._vertexDegreesAreDirty 	= true;		// Mark the vertex degree count as dirty to ensure we recalculate the degrees
 
 			// Maintain the best candidate seen so far:
 			var selectedEdge 			= null;
@@ -1132,10 +1147,10 @@ class mesh
 				var numSharedFaces = 0;
 				for (var currentVertIdx = 0; currentVertIdx < this._vertices.length; currentVertIdx++)
 				{
-					if (this.getEdge(selectedEdge._vertOrigin._vertIndex, currentVertIdx) != null && this.getEdge(selectedEdge._vertDest._vertIndex, currentVertIdx) != null)
+					if (this.getEdge(selectedEdge._vertOrigin._vertIndex, currentVertIdx) != null && 
+						this.getEdge(selectedEdge._vertDest._vertIndex, currentVertIdx) != null)
 					{
 						numSharedFaces++;
-
 						if (numSharedFaces > 2)
 						{
 							break;
@@ -1152,9 +1167,11 @@ class mesh
 					continue;
 				}
 
+				// Cache the current neighboring vertices so we can update their degrees when we're done:
+				var destVertNeighbors = this.getVertexNeighbors(selectedEdge._vertDest._vertIndex);
 
 				// Find the degree of the deprecated vertex:
-				var destVertDegree = this.countVertexDegree( selectedEdge._vertDest._vertIndex);
+				var destVertDegree = this.getVertexDegree( selectedEdge._vertDest._vertIndex);				
 
 				// Update the origin vertex position to match the computed ideal vertex position:
 				selectedEdge._vertOrigin._position 	= vec3.fromValues(collapsedVertexPosition[0], collapsedVertexPosition[1], collapsedVertexPosition[2]);		
@@ -1229,16 +1246,17 @@ class mesh
 					innerEdge._edgeLeftCCW 		= topLeftEdge;
 
 					topLeftEdge._edgeLeftCW		= innerEdge;
-					innerEdge._edgeLeftCW		= botLeftEdge;
 					botLeftEdge._edgeLeftCW		= topLeftEdge;
+					innerEdge._edgeLeftCW		= botLeftEdge;					
 
 					invInnerEdge._edgeLeftCCW 	= botRightEdge;
 					botRightEdge._edgeLeftCCW 	= topRightEdge;
 					topRightEdge._edgeLeftCCW 	= invInnerEdge;
 
 					invInnerEdge._edgeLeftCW 	= topRightEdge;
-					topRightEdge._edgeLeftCW	= botRightEdge;
 					botRightEdge._edgeLeftCW	= invInnerEdge;
+					topRightEdge._edgeLeftCW	= botRightEdge;
+					
 
 					// Remove the surviving edge from the edge table:
 					this.removeEdge(innerEdge._vertOrigin._vertIndex, innerEdge._vertDest._vertIndex);
@@ -1249,7 +1267,13 @@ class mesh
 					invInnerEdge._vertDest 	= selectedEdge._vertOrigin;
 
 					// Update the vert -> edge pointer:
-					innerEdge._vertOrigin._edge = innerEdge;
+					topLeftEdge._vertOrigin._edge 	= topLeftEdge;
+					botLeftEdge._vertOrigin._edge 	= botLeftEdge;
+					innerEdge._vertOrigin._edge 	= innerEdge;
+
+					invInnerEdge._vertOrigin._edge 	= invInnerEdge;
+					botRightEdge._vertOrigin._edge 	= botRightEdge;
+					topRightEdge._vertOrigin._edge 	= topRightEdge;					
 
 					this.addEdge(innerEdge);
 					this.addEdge(invInnerEdge);
@@ -1368,7 +1392,17 @@ class mesh
 					invRightInnerEdge._vertOrigin 	= selectedEdge._vertOrigin;
 
 					// Update the vert -> edge pointer:
-					leftInnerEdge._vertOrigin._edge = leftInnerEdge;
+					topLeftEdge._vertOrigin._edge 		= topLeftEdge;
+					botLeftEdge._vertOrigin._edge 		= botLeftEdge;
+					leftInnerEdge._vertOrigin._edge 	= leftInnerEdge;
+
+					topCenterEdge._vertOrigin._edge 	= topCenterEdge;
+					invLeftInnerEdge._vertOrigin._edge 	= invLeftInnerEdge;
+					invRightInnerEdge._vertOrigin._edge = invRightInnerEdge;
+					
+					topRightEdge._vertOrigin._edge 		= topRightEdge;
+					botRightEdge._vertOrigin._edge 		= botRightEdge;
+					rightInnerEdge._vertOrigin._edge	= rightInnerEdge;					
 
 					// Reinsert into the edge table:
 					this.addEdge(leftInnerEdge);
@@ -1488,6 +1522,9 @@ class mesh
 							currentEdge._vertOrigin 	= selectedEdge._vertOrigin;
 							invCurrentEdge._vertDest 	= selectedEdge._vertOrigin;
 
+							// Update vertex -> edge pointers:
+							currentEdge._vertOrigin._edge 		= currentEdge;
+							invCurrentEdge._vertOrigin._edge 	= invCurrentEdge;
 
 							// Check: Is there already an edge where we're about to assemble one?
 							if (this.getEdge(selectedEdge._vertOrigin._vertIndex, currentEdge._vertDest._vertIndex) != null ||		// SelectedEdge's origin -> neighbor vert
@@ -1521,7 +1558,22 @@ class mesh
 					}
 
 					// Update the vert -> edge pointer:
-					leftEdge._vertOrigin._edge = leftEdge;
+					leftEdge._vertOrigin._edge 			= leftEdge;
+					leftEdgeCCW._vertOrigin._edge		= leftEdgeCCW;
+					botLeftEdge._vertOrigin._edge		= botLeftEdge;
+
+					this.getInverseEdge(leftEdge)._vertOrigin._edge 	= this.getInverseEdge(leftEdge);
+					this.getInverseEdge(leftEdgeCCW)._vertOrigin._edge 	= this.getInverseEdge(leftEdgeCCW);
+					this.getInverseEdge(botLeftEdge)._vertOrigin._edge 	= this.getInverseEdge(botLeftEdge);
+
+					rightEdge._vertOrigin._edge 	= rightEdge;
+					rightEdgeCW._vertOrigin._edge 	= rightEdgeCW;
+					botRightEdge._vertOrigin._edge	= botRightEdge;
+
+					this.getInverseEdge(rightEdge)._vertOrigin._edge 		= this.getInverseEdge(rightEdge);
+					this.getInverseEdge(rightEdgeCW)._vertOrigin._edge 		= this.getInverseEdge(rightEdgeCW);
+					this.getInverseEdge(botRightEdge)._vertOrigin._edge 	= this.getInverseEdge(botRightEdge);
+
 
 					// Update the edge pointers:
 					leftEdge._edgeLeftCCW 		= leftEdgeCCW; 	// Not necessary, but for readability...
@@ -1541,8 +1593,8 @@ class mesh
 					botRightEdge._edgeLeftCW	= rightEdge;
 
 					// Delete the deprecated faces:
-					this._faces[leftDeprecatedEdge._faceRight._faceIndex] = null;
-					this._faces[rightDeprecatedEdge._faceRight._faceIndex] = null;
+					this._faces[leftDeprecatedEdge._faceRight._faceIndex] 	= null;
+					this._faces[rightDeprecatedEdge._faceRight._faceIndex] 	= null;
 
 					// Update the face pointers: Keep selectedEdge's left/right faces:
 					leftEdge._faceLeft 			= selectedEdge._faceLeft;
@@ -1584,6 +1636,7 @@ class mesh
 					// Delete the selected edge:
 					this.removeEdge(selectedEdge._vertOrigin._vertIndex, selectedEdge._vertDest._vertIndex);
 					this.removeEdge(selectedEdge._vertDest._vertIndex, selectedEdge._vertOrigin._vertIndex);
+					
 					currentEdgeCount -= 1;	// Decrement by the number of 1-way edges removed
 
 					// Finally, delete the inner vertex:
@@ -1597,7 +1650,9 @@ class mesh
 
 						console.log("Deleted vertex Pos " + selectedEdge._vertDest._position[0] + ", " +selectedEdge._vertDest._position[1] + ", " +selectedEdge._vertDest._position[2]);
 					}
-				}
+
+					this.updateDegreeOfSpecificNeighbors(destVertNeighbors);
+				}			
 		
 				if (DEBUG_ENABLED)
 				{
@@ -1609,7 +1664,6 @@ class mesh
 			{
 				console.log("[mesh][decimateMesh] Error: Did not select a valid candidate edge");
 			}
-
 
 		} // End of edge loop
 
@@ -1624,7 +1678,6 @@ class mesh
 		this.initializeBuffers();
 	}
 
-
 	// Helper function: Collapse an edge terminating in a degree 3 vertex
 	// Note: The selectedEdge destination vertex MUST be degree 3 
 	decimateDegree3Edge(selectedEdge)
@@ -1637,6 +1690,8 @@ class mesh
 
 			this.validateMesh();			
 		}
+
+		var destVertNeighbors = this.getVertexNeighbors(selectedEdge._vertDest._vertIndex);
 		
 		var selectedOriginIdx 	= selectedEdge._vertOrigin._vertIndex;
 		var selectedDestIdx 	= selectedEdge._vertDest._vertIndex;
@@ -1675,6 +1730,15 @@ class mesh
 		this.getInverseEdge(rightEdge)._faceRight 	= selectedEdge._faceLeft;
 		this.getInverseEdge(backEdge)._faceRight 	= selectedEdge._faceLeft;
 
+		// Update vertex -> edge pointers:
+		leftEdge._vertOrigin._edge 	= leftEdge;
+		rightEdge._vertOrigin._edge = rightEdge;
+		backEdge._vertOrigin._edge 	= backEdge;
+
+		this.getInverseEdge(leftEdge)._vertOrigin._edge		= this.getInverseEdge(leftEdge);
+		this.getInverseEdge(rightEdge)._vertOrigin._edge	= this.getInverseEdge(rightEdge);
+		this.getInverseEdge(backEdge)._vertOrigin._edge		= this.getInverseEdge(backEdge);
+
 		// Delete the selected edge:
 		this.removeEdge(selectedOriginIdx, selectedDestIdx);
 		this.removeEdge(selectedDestIdx, selectedOriginIdx);
@@ -1686,8 +1750,11 @@ class mesh
 		this.removeEdge(deprecatedRightEdge._vertOrigin._vertIndex, deprecatedRightEdge._vertDest._vertIndex);
 		this.removeEdge(deprecatedRightEdge._vertDest._vertIndex, deprecatedRightEdge._vertOrigin._vertIndex);
 		
-		// Finally, delete the inner vertex:
+		// Finally, delete the inner/destination vertex:
 		this._vertices[selectedDestIdx] = null;
+
+		// Update degrees of the neighboring vertices:
+		this.updateDegreeOfSpecificNeighbors(destVertNeighbors);
 		
 		if (DEBUG_ENABLED)
 		{
@@ -1695,6 +1762,8 @@ class mesh
 			console.log("Deleted " + deprecatedLeftEdge._vertOrigin._vertIndex + " <-> " + deprecatedLeftEdge._vertDest._vertIndex);
 			console.log("Deleted " + deprecatedRightEdge._vertOrigin._vertIndex + " <-> " + deprecatedRightEdge._vertDest._vertIndex);
 			console.log("Deleted vertex " + selectedDestIdx);
+
+			this.validateMesh();
 		}
 
 		// Recompute the face normal
@@ -2936,6 +3005,43 @@ class mesh
 					DEBUG_ERROR_HAS_OCCURRED = true;
 				}
 			}
+		}
+
+		// Check neighbor navigation:
+		var MAX_CHECKS = 1000;
+		for (var currentVert = 0; currentVert < this._vertices.length; currentVert++)
+		{
+			if (this._vertices[currentVert] == null) 
+			{
+				continue;
+			}
+
+			var vertexEdge = this._vertices[currentVert]._edge;
+			if ( this._edges.has( this.getEdgeIdentifier(vertexEdge._vertOrigin._vertIndex, vertexEdge._vertDest._vertIndex) ) == false )
+			{
+				console.log("ERROR: Found a vertex with an outdated edge pointer!");
+			}
+
+			if (!this._edges.has( this.getEdgeIdentifier(vertexEdge._vertOrigin._vertIndex, vertexEdge._vertDest._vertIndex) ) || !this._edges.has( this.getEdgeIdentifier(vertexEdge._vertDest._vertIndex, vertexEdge._vertOrigin._vertIndex) ))
+			{
+				console.log("ERROR: Found a vertex with an invalid edge reference");
+				console.log(vertexEdge);
+			}
+
+			var currentEdge = vertexEdge;
+			var count = 0;
+			do
+			{
+				currentEdge = this.getInverseEdge(currentEdge._edgeLeftCCW);
+
+				// Check for "infinite" loops (ie. beyond some reasonable degree):
+				count++;
+				if (count >= MAX_CHECKS)
+				{
+					console.log("ERROR: Failed to navigate back to original edge when traversing neighbors");
+				}
+				
+			} while (currentEdge != vertexEdge);
 		}
 
 		console.log("MESH VALIDATION COMPLETE");

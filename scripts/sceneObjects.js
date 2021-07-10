@@ -1,6 +1,6 @@
 // Scene objects: Environment that renderObjects are rendered in/with
 
-// Geometric Modeling
+// Geometric Modeling: Subdivision and Decimation demo
 // by Adam Badke
 // adambadke@gmail.com
 

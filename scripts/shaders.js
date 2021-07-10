@@ -1,6 +1,6 @@
 // GLSL Shaders as JS strings
 
-// Geometric Modeling
+// Geometric Modeling: Subdivision and Decimation demo
 // by Adam Badke
 // adambadke@gmail.com
 

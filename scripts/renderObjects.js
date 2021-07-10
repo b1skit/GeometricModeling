@@ -1,6 +1,6 @@
 // renderable objects: Things that are rendered in a scene
 
-// Geometric Modeling
+// Geometric Modeling: Subdivision and Decimation demo
 // by Adam Badke
 // adambadke@gmail.com
 

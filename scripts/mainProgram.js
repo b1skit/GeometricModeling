@@ -1,6 +1,6 @@
 // Main program logic
 
-// Geometric Modeling
+// Geometric Modeling: Subdivision and Decimation demo
 // by Adam Badke
 // adambadke@gmail.com
 
@@ -75,12 +75,12 @@ function loadOBJ(objURL)
 	//objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/subdivision/small_horse.obj';
 	
 	// Set 2:
-	// objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/armhand.obj';
+	objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/armhand.obj';
 	// objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/bigfish.obj';
 	// objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/bigsmile.obj';
 	// objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/horse.obj';
 	// objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/man.obj';
-	// // objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/nice8.obj';
+	// objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/nice8.obj';
 	
 	// Create a new render object and add it to the scene:
 	theRenderObject = new renderObject();

@@ -1,6 +1,6 @@
 // Shared values and helpers
 
-// Geometric Modeling
+// Geometric Modeling: Subdivision and Decimation demo
 // by Adam Badke
 // adambadke@gmail.com
 
