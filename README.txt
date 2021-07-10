@@ -2,6 +2,8 @@ Geometric Modeling: Subdivision and Decimation demo
 by Adam Badke
 adambadke@gmail.com
 
+Launch by loading index.html in a (preferably Chrome) brower.
+
 This code was developed and tested using the Chrome browser with Windows 10. It also has been verified to work with the Windows Edge browser.
 
 The following resources were consulted during the creation of this project:
@@ -30,5 +32,7 @@ Additionally, to maintain a closed triangle mesh, this program will not collapse
 
 TODO:
 -----
-- Optimize the final stages of decimation: Still quite slow despite a large number of recent optimizations...
+- Mouse controls
+- Change decimation controls to percentages of edges
+
  

@@ -1550,10 +1550,6 @@ class mesh
 							// Insert the updated edges back into the table:
 							this.addEdge(currentEdge);
 							this.addEdge(invCurrentEdge);
-
-							// Update face normals:
-							currentEdge._faceLeft.computeFaceNormal(false);
-							currentEdge._faceRight.computeFaceNormal(false);
 						}
 					}
 
@@ -1765,19 +1761,16 @@ class mesh
 
 			this.validateMesh();
 		}
-
-		// Recompute the face normal
-		selectedEdge._faceLeft.computeFaceNormal(false);
 	}
 
 
-	// Helper function: Deletes deprecated (null) verts/faces, and updates their indices:
+	// Helper function: Deletes deprecated (null) verts/faces, and updates their indices. Also recomputes face normals
 	removeEmptyPrimitives()
 	{
 		if (DEBUG_ENABLED)
 		{
 			console.log("REMOVING EMPTY PRIMITIVES:");
-		}		
+		}	
 
 		// Cleanup faces:
 		var newFaces = [];
@@ -1813,24 +1806,10 @@ class mesh
 		// Allocate a new edge table with the new number of vertices:
 		this.allocateEdgeTable();
 
-		// Repack the new edge table according to the updated vertex indexes:
-		for (var row = 0; row < prevNumVerts; row++)
+		// Insert each entry in the previous edge table into the new edge table:
+		for (const [key, value] of currentEdges.entries())
 		{
-			for (var col = 0; col < prevNumVerts; col++)
-			{
-				var edgeID = this.getEdgeIdentifier(row, col);
-				if (currentEdges.has(edgeID))
-				{
-					if (DEBUG_ENABLED)
-					{
-						if (this.getEdge(row, col) != null)
-						{
-							console.log("ERROR: New edge table already has an edge at [" + row + "][" + col + "]");
-						}
-					}				
-					this.addEdge( currentEdges.get(edgeID) );
-				}
-			}
+			this.addEdge(currentEdges.get(key));
 		}
 
 		this._vertexDegreesAreDirty = true;
