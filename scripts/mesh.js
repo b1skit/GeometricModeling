@@ -244,7 +244,7 @@ class mesh
 
     // Winged-edge structure:
     _faces      = null;
-    _edges      = null;		// 2D table
+    _edges      = null;			// Map: "orginVertIdx,destVertIdx" -> Edge pointer
     _vertices   = null;
 
 	_vertexDegree 				= [];
@@ -260,20 +260,16 @@ class mesh
 		// Do nothing...
     }
 
+	// Assemble a string used to identify an edge in our edge dictionary
+	getEdgeIdentifier(originVertIndex, destVertIndex)
+	{
+		return originVertIndex.toString() + "," + destVertIndex.toString();
+	}
 
 	// (Re)Allocate an empty edge table
-	allocateEdgeTable(numVerts)
+	allocateEdgeTable()
 	{
-		// 2D edge table:
-		this._edges 	= [];
-		for (var currentRow = 0; currentRow < numVerts; currentRow++)
-		{
-			this._edges.push(new Array());
-			for (var currentCol = 0; currentCol < numVerts; currentCol++)
-			{
-				this._edges[currentRow].push(null);
-			}
-		}
+		this._edges = new Map();
 	}
 
 
@@ -281,44 +277,44 @@ class mesh
 	// Note: Returned edge may be null
 	getEdge(originVertIndex, destVertIndex)
 	{
-		return this._edges[originVertIndex][destVertIndex];
+		var edgeID = this.getEdgeIdentifier(originVertIndex, destVertIndex);
+
+		if (this._edges.has(edgeID) == false)
+		{
+			return null;
+		}
+		else
+		{
+			return this._edges.get(edgeID);
+		}
 	}
 
 	// Set a directed edge in our edge table
 	// Note: newEdge is not checked for null...
 	addEdge(newEdge)
 	{
-		this._edges[newEdge._vertOrigin._vertIndex][newEdge._vertDest._vertIndex] = newEdge;
+		var edgeID = this.getEdgeIdentifier(newEdge._vertOrigin._vertIndex, newEdge._vertDest._vertIndex);
+
+		this._edges.set(edgeID, newEdge);
 	}
 
 	// Remove a directed edge from our edge table
 	removeEdge(originVertIndex, destVertIndex)
 	{
-		this._edges[originVertIndex][destVertIndex] = null;
+		var edgeID = this.getEdgeIdentifier(originVertIndex, destVertIndex);
+
+		if(this._edges.has(edgeID))
+		{
+			this._edges.delete(edgeID); // CAN WE JUST SAFELY DELETE WITHOUT CHECKING?!?!?!?!?!
+		}
 	}
 
 
 	// Get the number of 1-way edges in the mesh
 	getNum1WayEdges()
 	{
-		if (this._numEdgesIsDirty)
-		{
-			this._numEdges = 0; 
-			for(var currentStartVertIdx = 0; currentStartVertIdx < this._vertices.length; currentStartVertIdx++)
-			{
-				for (var currentEndVertIdx = (currentStartVertIdx + 1); currentEndVertIdx < this._vertices.length; currentEndVertIdx++)
-				{
-					if (this.getEdge(currentStartVertIdx, currentEndVertIdx) != null)
-					{
-						this._numEdges++;
-					}
-				}
-			}
-
-			this._numEdgesIsDirty  = false;
-		}
-
-		return this._numEdges;
+		console.assert(this._edges.size % 2 == 0);	// We should always have bi-directional edges in a closed mesh...
+		return this._edges.size / 2;
 	}
 
 
@@ -347,13 +343,13 @@ class mesh
 	}
 
 
-	// Decimation helper: Count the current degree via the edge table
+	// Helper function: Count the current degree of a single vertex
 	countVertexDegree(vertexIndex)
 	{
 		var currentCount = 0;
-		for (var currentCol = 0; currentCol < this._vertices.length; currentCol++)
+		for (var currentVert = 0; currentVert < this._vertices.length; currentVert++)
 		{
-			if (this.getEdge(vertexIndex, currentCol) != null)
+			if (this.getEdge(vertexIndex, currentVert) != null)
 			{
 				currentCount++;
 			}			
@@ -362,30 +358,25 @@ class mesh
 	}
 
 
-	// Subdivision helper: Get the number of edges connected to a vertex
+	// Get the number of edges connected to a vertex
 	getVertexDegree(vertexIndex)
 	{
-		// Recompute all vertex degrees, if required:
 		if (this._vertexDegreesAreDirty == true)
 		{
+			// Initialize all degrees as 0:
 			this._vertexDegree = [];
-
-			// Process each row in the edge table (one row per vertex):
-			for (var currentRow = 0; currentRow < this._vertices.length; currentRow++)
+			for (var currentVert = 0; currentVert < this._vertices.length; currentVert++)
 			{
-				// Count the number of non-null entries in the row (each a neighbor of the vertex represented by the current row):
-				var currentCount = 0;
-				for (var currentCol = 0; currentCol < this._vertices.length; currentCol++)
-				{
-					if (this.getEdge(currentRow, currentCol) != null)	//  Note: _edges[i][i] == null, always
-					{
-						currentCount++;
-					}
-				}
-				this._vertexDegree.push(currentCount);	// Each element of this array holds the neighbor count of the vertex sharing the same index
+				this._vertexDegree[currentVert] = 0;
 			}
 
-			this._vertexDegreesAreDirty = false;
+			// Check each edge in turn: Count the number of outgoing edges departing each vertex
+			for (const [key, value] of this._edges.entries())
+			{				
+				var vertIdx = parseInt( key.split(',')[0] );
+
+				this._vertexDegree[vertIdx] = this._vertexDegree[vertIdx] + 1;
+			}
 		}
 
 		return this._vertexDegree[vertexIndex];
@@ -399,7 +390,7 @@ class mesh
 		var neighbors = [];
 		for (var currentVert = 0; currentVert < this._vertices.length; currentVert++)
 		{
-			// Walk the vertexIndex row: Check edges starting at the received vertexIndex -> neighbor:
+			// Check edges starting at the received vertexIndex -> neighbor:
 			var currentEdge = this.getEdge(vertexIndex, currentVert);
 			if (currentEdge != null)
 			{
@@ -454,9 +445,6 @@ class mesh
 
 			var inverseEdge = new edge(candidateEdge._vertDest, candidateEdge._vertOrigin);
 			this.addEdge(inverseEdge);
-
-			// Mark the edges table as dirty:
-			this._numEdgesIsDirty = true;
 		}
 
 		return this.getEdge(originVertIndex, destVertIndex);
@@ -649,8 +637,8 @@ class mesh
 			this._vertices.push(null);	// Pre-allocate the vertices array
 		}
 
-		// Allocate a 2D edge table:
-		this.allocateEdgeTable(extractedVerts.length);
+		// Allocate a 2D edge map:
+		this.allocateEdgeTable();
 
 		this._faces 	= [];
 
@@ -758,7 +746,6 @@ class mesh
 		// Compute the smooth normals:
 		this.computeSmoothNormals();
 
-		// console.log("[mesh::constructMeshFromOBJData] Extracted " + this._vertices.length + " vertices, " + (this._faces.length * 3) + " (bi-directional) edges, " + this._faces.length + " faces to the winged data structure");
 		console.log("[mesh::constructMeshFromOBJData] Extracted " + this._vertices.length + " vertices, " + this.getNum1WayEdges() + " (one-way) edges, " + this._faces.length + " faces to the winged data structure");
 
         // Finally, initialize the render object mesh's vertex buffers:
@@ -846,8 +833,8 @@ class mesh
 	getRandomEdge()
 	{
 		// Pick a random face:
-		let faceIndex = Math.random() * this._faces.length;
-		faceIndex = Math.min(Math.round(faceIndex), this._faces.length - 1);
+		let faceIndex 	= Math.random() * this._faces.length;
+		faceIndex 		= Math.min(Math.round(faceIndex), this._faces.length - 1);
 
 		while(this._faces[faceIndex] === null)
 		{
@@ -1000,7 +987,6 @@ class mesh
 			}
 
 			this._vertexDegreesAreDirty 	= true;		// Mark the vertex degree count as dirty to ensure we recalculate the degrees
-			this._numEdgesIsDirty 			= true;		// Mark the edges table as dirty
 
 			// Maintain the best candidate seen so far:
 			var selectedEdge 			= null;
@@ -1088,10 +1074,8 @@ class mesh
 				if (DEBUG_ENABLED)
 				{
 					DEBUG_EDGE_SEQUENCE += "[" + selectedEdge._vertOrigin._vertIndex + ", " + selectedEdge._vertDest._vertIndex + "],\n";
-
 					console.log("************ Collapsing selected edge: ************\n" + selectedEdge._vertOrigin._vertIndex + ", " + selectedEdge._vertDest._vertIndex);
 				}
-				
 
 				// Pre-collapse any neighboring faces that will be invalidated by the current edge collapse:
 				var leftSplittingEdge 	= this.getInverseEdge(selectedEdge._edgeLeftCCW)._edgeLeftCW;
@@ -1144,7 +1128,6 @@ class mesh
 					}
 				}
 
-
 				// Detect edges that cross over, and would cause an invalid fins/non-manifold geometry. At most, the selectedEdge origin/dest vertices should be shared by 2 faces
 				var numSharedFaces = 0;
 				for (var currentVertIdx = 0; currentVertIdx < this._vertices.length; currentVertIdx++)
@@ -1172,7 +1155,6 @@ class mesh
 
 				// Find the degree of the deprecated vertex:
 				var destVertDegree = this.countVertexDegree( selectedEdge._vertDest._vertIndex);
-				
 
 				// Update the origin vertex position to match the computed ideal vertex position:
 				selectedEdge._vertOrigin._position 	= vec3.fromValues(collapsedVertexPosition[0], collapsedVertexPosition[1], collapsedVertexPosition[2]);		
@@ -1258,7 +1240,7 @@ class mesh
 					topRightEdge._edgeLeftCW	= botRightEdge;
 					botRightEdge._edgeLeftCW	= invInnerEdge;
 
-					// Remove the surviving edge from its current location in the edge table:
+					// Remove the surviving edge from the edge table:
 					this.removeEdge(innerEdge._vertOrigin._vertIndex, innerEdge._vertDest._vertIndex);
 					this.removeEdge(invInnerEdge._vertOrigin._vertIndex, invInnerEdge._vertDest._vertIndex);
 
@@ -1751,28 +1733,24 @@ class mesh
 			{
 				this._vertices[currentVert]._vertIndex = newVerts.length;
 				newVerts.push(this._vertices[currentVert]);
-
-				// if (DEBUG_ENABLED)
-				// {
-				// 	console.log("Remapped vertex [" + currentVert + "] -> [" + this._vertices[currentVert]._vertIndex + "]");
-				// }
 			}					
 		}
 		var prevNumVerts 	= this._vertices.length;
 		this._vertices 		= newVerts;
 
-		// Cache off the current edge table:
+		// Cache off the current edge map:
 		var currentEdges = this._edges;
 
 		// Allocate a new edge table with the new number of vertices:
-		this.allocateEdgeTable(this._vertices.length);
+		this.allocateEdgeTable();
 
 		// Repack the new edge table according to the updated vertex indexes:
 		for (var row = 0; row < prevNumVerts; row++)
 		{
 			for (var col = 0; col < prevNumVerts; col++)
 			{
-				if (currentEdges[row][col] != null)
+				var edgeID = this.getEdgeIdentifier(row, col);
+				if (currentEdges.has(edgeID))
 				{
 					if (DEBUG_ENABLED)
 					{
@@ -1781,12 +1759,11 @@ class mesh
 							console.log("ERROR: New edge table already has an edge at [" + row + "][" + col + "]");
 						}
 					}				
-					this.addEdge( currentEdges[row][col] );
+					this.addEdge( currentEdges.get(edgeID) );
 				}
 			}
 		}
 
-		this._numEdgesIsDirty 		= true;
 		this._vertexDegreesAreDirty = true;
 
 		if (DEBUG_ENABLED)
@@ -1828,7 +1805,6 @@ class mesh
 		var totalEdges = this.getNum1WayEdges();
 
 		this._vertexDegreesAreDirty 	= true;		// Mark the vertex degree count as dirty to ensure we recalculate the degrees
-		this._numEdgesIsDirty 			= true;		// Mark the edges table as dirty
 
 		// Calculate the number of vertices in the subdivided mesh:
 		var newTotalVerts = this._vertices.length + totalEdges;
@@ -1840,16 +1816,7 @@ class mesh
 			newVerts.push(null);
 		}
 
-		// 2D edge table:
-		var newEdges = [];
-		for (var currentRow = 0; currentRow < newTotalVerts; currentRow++)
-		{
-			newEdges.push(new Array());
-			for (var currentCol = 0; currentCol < newTotalVerts; currentCol++)
-			{
-				newEdges[currentRow].push(null);
-			}
-		}
+		var newEdges = new Map();
 
 		var newFaces = [];
 
@@ -2048,25 +2015,25 @@ class mesh
 					newVerts[currentEdge._vertOrigin._vertIndex], 
 					newVert
 					);
-				newEdges[currentEdge._vertOrigin._vertIndex][newVert._vertIndex] = edge1;
+				newEdges.set(this.getEdgeIdentifier(currentEdge._vertOrigin._vertIndex, newVert._vertIndex), edge1);
 
 				var edge1Inverse = new edge(
 					newVert,
 					newVerts[currentEdge._vertOrigin._vertIndex]
 					);
-				newEdges[newVert._vertIndex][currentEdge._vertOrigin._vertIndex] = edge1Inverse;
+				newEdges.set(this.getEdgeIdentifier(newVert._vertIndex, currentEdge._vertOrigin._vertIndex, ), edge1Inverse);
 
 				var edge2 = new edge(
 					newVert,
 					newVerts[currentEdge._vertDest._vertIndex]					
 					);
-				newEdges[newVert._vertIndex][currentEdge._vertDest._vertIndex] = edge2;
+				newEdges.set(this.getEdgeIdentifier(newVert._vertIndex, currentEdge._vertDest._vertIndex), edge2);
 
 				var edge2Inverse = new edge(
 					newVerts[currentEdge._vertDest._vertIndex],
 					newVert					
 					);
-				newEdges[currentEdge._vertDest._vertIndex][newVert._vertIndex] = edge2Inverse;
+				newEdges.set(this.getEdgeIdentifier(currentEdge._vertDest._vertIndex, newVert._vertIndex), edge2Inverse);
 
 				// Update new vertex's vert -> edge pointer:
 				newVert._edge = edge2;	// Origin vertex of edge2
@@ -2111,13 +2078,13 @@ class mesh
 					currentNewVert,
 					prevNewVert
 				);
-				newEdges[currentNewVert._vertIndex][prevNewVert._vertIndex] = newEdge;
+				newEdges.set(this.getEdgeIdentifier(currentNewVert._vertIndex, prevNewVert._vertIndex), newEdge);
 
 				var inverseNewEdge = new edge(
 					prevNewVert,
 					currentNewVert					
 				);
-				newEdges[prevNewVert._vertIndex][currentNewVert._vertIndex] = inverseNewEdge;
+				newEdges.set(this.getEdgeIdentifier(prevNewVert._vertIndex, currentNewVert._vertIndex), inverseNewEdge);
 
 				// Cache the pointers to the new edges so we can create the internal face later:
 				createdEdges.push(newEdge);
@@ -2140,11 +2107,11 @@ class mesh
 				inverseNewEdge._faceRight = newFace;
 
 				// Update the inverse edge face pointers
-				newEdges[currentEdge._vertOrigin._vertIndex][prevNewVert._vertIndex]._faceRight = newFace;
-				prevEdge._children[1]._faceRight = newEdges[currentEdge._vertOrigin._vertIndex][prevNewVert._vertIndex]._faceLeft;
+				newEdges.get(this.getEdgeIdentifier(currentEdge._vertOrigin._vertIndex, prevNewVert._vertIndex))._faceRight = newFace;
+				prevEdge._children[1]._faceRight = newEdges.get(this.getEdgeIdentifier(currentEdge._vertOrigin._vertIndex, prevNewVert._vertIndex) )._faceLeft;
 
-				newEdges[currentNewVert._vertIndex][currentEdge._vertOrigin._vertIndex]._faceRight = newFace;
-				currentEdge._children[0]._faceRight = newEdges[currentNewVert._vertIndex][currentEdge._vertOrigin._vertIndex]._faceLeft;
+				newEdges.get(this.getEdgeIdentifier(currentNewVert._vertIndex, currentEdge._vertOrigin._vertIndex))._faceRight = newFace;
+				currentEdge._children[0]._faceRight = newEdges.get(this.getEdgeIdentifier(currentNewVert._vertIndex, currentEdge._vertOrigin._vertIndex) )._faceLeft;
 
 				// Compute the face normal:
 				newFace.computeFaceNormal(false);
@@ -2191,7 +2158,6 @@ class mesh
 		this._vertices 	= newVerts;
 
 		this._vertexDegreesAreDirty 	= true;		// Mark the vertex degree count as dirty to ensure we recalculate the degrees
-		this._numEdgesIsDirty 			= true;		// Mark the edges table as dirty
 
 		this._errorQuadricsAreComputed 	= false; 	// We've added new vertices, so we potentially need to recompute error Quadrics
 
