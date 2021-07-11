@@ -15,6 +15,7 @@
 //		http://www.graphics.rwth-aachen.de/media/papers/mcd_vmv021.pdf
 
 
+var canvas = null;	// HTML Canvas: Populated in main()
 
 /*	HTML -> Javascript hooks:
 *
@@ -115,6 +116,99 @@ function downloadOBJ(filename)
 }	
 
 
+/*	Event handling:
+*	
+*/
+var leftMouseDown 	= false;
+var middleMouseDown = false;
+var rightMouseDown 	= false;
+
+var eventHandler = function(event)
+{
+	switch(event.type)
+	{
+		case "mousedown":
+		{
+			switch (event.button)
+			{
+				case 0: // Left mouse button
+				{
+					leftMouseDown = true;
+					break;
+				}
+				case 1: // Middle mouse button
+				{
+					middleMouseDown = true;
+					break;
+				}
+				case 2: // Right mouse button
+				{
+					rightMouseDown = true;
+					break;
+				}
+			}
+			break;
+		}
+		case "mouseup":
+		{
+			switch(event.button)
+			{
+				case 0:
+				{
+					leftMouseDown = false;
+					break;
+				}
+				case 1:
+				{
+					middleMouseDown = false;
+					break;
+				}
+				case 2:
+				{
+					rightMouseDown = false;
+					break;
+				}
+			}
+
+			break;
+		}
+
+		case "mousemove":
+		{
+			if (leftMouseDown)
+			{
+				updateMeshTransform(TRANSFORM_TYPE.ROTATE_X, event.movementY);
+				updateMeshTransform(TRANSFORM_TYPE.ROTATE_Y, event.movementX);
+			}
+			
+			if (middleMouseDown)
+			{
+				if (Math.abs(event.movementX) > Math.abs(event.movementY))
+				{
+					updateMeshTransform(TRANSFORM_TYPE.SCALE_UNIFORM, event.movementX);
+				}
+				else
+				{
+					updateMeshTransform(TRANSFORM_TYPE.SCALE_UNIFORM, event.movementY);
+				}				
+			}
+
+			if (rightMouseDown)
+			{
+
+				updateMeshTransform(TRANSFORM_TYPE.TRANSLATE_X, event.movementX / canvas.width);
+				updateMeshTransform(TRANSFORM_TYPE.TRANSLATE_Y, -event.movementY / canvas.width);
+			}
+			
+			break;
+		}
+
+		default:
+			console.log("[mainProgram][eventHandler] Error: Unhandled event type received");
+	}
+}
+
+
 /*	Main program:
 *
 */
@@ -122,7 +216,7 @@ function main()
 {
     
     // Get the canvas from our HTML document:
-    const canvas = document.querySelector("#glCanvas");
+    canvas = document.querySelector("#glCanvas");
 
     // Initialize the WebGL context:
     gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
@@ -132,6 +226,11 @@ function main()
         return;
     }
 
+	// Add event listeners (https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener):
+	canvas.addEventListener("mousedown", eventHandler, false);
+	canvas.addEventListener("mouseup", eventHandler, false);
+	canvas.addEventListener("mousemove", eventHandler, false);
+	
     console.log("[mainProgram::main] Successfully initialized WebGL!");
 
     // Create a scene:

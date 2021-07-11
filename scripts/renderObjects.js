@@ -19,8 +19,12 @@ const TRANSFORM_TYPE =
     SCALE_X     : 6,
     SCALE_Y     : 7,
     SCALE_Z     : 8,
+
+	SCALE_UNIFORM : 9,
 }
 
+const TRANSLATE_SPEED 	= 3.0;	// Scaling factor for X/Y translations via dragging the right mouse button
+const SCALE_SENSITIVITY = 0.01;	// Scaling factor for scaling via the middle mouse button
 
 /* 	TRANSFORM CLASS
 *	Shared by various render and scene objects
@@ -31,7 +35,8 @@ class transform
     _rotation        = quat.create();
     _scale           = [1.0, 1.0, 1.0];
 
-    _rotationEuler   = [0.0, 0.0, 0.0];
+    // _rotationEuler   = [0.0, 0.0, 0.0];
+	_ZRotation = 0.0;
 
     constructor()
     {
@@ -48,13 +53,13 @@ class transform
             // TRANSLATION:
             case TRANSFORM_TYPE.TRANSLATE_X:
                 {
-                    this._position[0] = transformVal;
+                    this._position[0] += TRANSLATE_SPEED * transformVal;
                 }
             break;
     
             case TRANSFORM_TYPE.TRANSLATE_Y:
                 {
-                    this._position[1] = transformVal;
+                    this._position[1] += TRANSLATE_SPEED * transformVal;
                 }
             break;
     
@@ -67,41 +72,52 @@ class transform
             // ROTATION:
             case TRANSFORM_TYPE.ROTATE_X:
             {
-                this._rotationEuler[0] = transformVal;
-                quat.fromEuler(this._rotation, this._rotationEuler[0], this._rotationEuler[1], this._rotationEuler[2]);
+				var newRotation = quat.create();
+                quat.fromEuler(newRotation, transformVal, 0, 0);
+
+				quat.multiply(this._rotation, newRotation, this._rotation);
             }
             break;
 
             case TRANSFORM_TYPE.ROTATE_Y:
             {
-                this._rotationEuler[1] = transformVal;
-                quat.fromEuler(this._rotation, this._rotationEuler[0], this._rotationEuler[1], this._rotationEuler[2]);
+				var newRotation = quat.create();
+                quat.fromEuler(newRotation, 0, transformVal, 0);
+
+				quat.multiply(this._rotation, newRotation, this._rotation);
             }
             break;
 
             case TRANSFORM_TYPE.ROTATE_Z:
             {
-                this._rotationEuler[2] = transformVal;
-                quat.fromEuler(this._rotation, this._rotationEuler[0], this._rotationEuler[1], this._rotationEuler[2]);
+				// Do nothing: We no longer support this via mouse controls				
             }
             break;
 
             // SCALE:
+			case TRANSFORM_TYPE.SCALE_UNIFORM:
+			{
+				this._scale[0] += SCALE_SENSITIVITY * parseFloat(transformVal);
+				this._scale[1] += SCALE_SENSITIVITY * parseFloat(transformVal);
+				this._scale[2] += SCALE_SENSITIVITY * parseFloat(transformVal);
+			}
+			break;
+
             case TRANSFORM_TYPE.SCALE_X:
             {
-                this._scale[0] = transformVal;
+                this._scale[0] = parseFloat(transformVal);
             }
             break;
 
             case TRANSFORM_TYPE.SCALE_Y:
             {
-                this._scale[1] = transformVal;
+                this._scale[1] = parseFloat(transformVal);
             }
             break;
 
             case TRANSFORM_TYPE.SCALE_Z:
             {
-                this._scale[2] = transformVal;
+                this._scale[2] = parseFloat(transformVal);
             }
             break;
             

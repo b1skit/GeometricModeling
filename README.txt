@@ -9,9 +9,9 @@ This code was developed and tested using the Chrome browser with Windows 10. It 
 
 Controls:
 ---------
-Left click: Rotate
-Right click: Translate
-Middle mouse: Scale
+Left click: 	Rotate about X/Y
+Middle mouse: 	Scale
+Right click: 	Translate
 
 
 A note on the number of edges collapsed per iteration:
@@ -38,7 +38,6 @@ The following resources were consulted during the creation of this project:
 
 TODO:
 -----
-- Mouse controls
 - Change decimation controls to percentages of edges
 - Display console output within web page
 - Load meshes via a dropdown -> Optionally take a URL?

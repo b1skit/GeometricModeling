@@ -33,7 +33,7 @@
 
     </head>
 
-    <body>
+    <body oncontextmenu="return false;"> <!-- Disable the context menu to prevent popups when dragging right mouse -->
         <canvas id="glCanvas" width="640" height="480"></canvas>
 
 
@@ -108,62 +108,54 @@
         <br>
 
         <h3>Controls:</h3>
-        <!-- Index values representing the transform type passed here must match the values defined in ./scripts/shared.js -->
-
-
-        <h4>Mesh Translation:</h4>
-		<div class="sliderGroup">			
-			<div class="slideContainer">
-				<label for="mesh_translation_x" id="mesh_translation_x_label" >X:</label>
-				<input id="mesh_translation_x" type="range" min="-50" max="50" step="0.001" value="0" class="slider" oninput="updateMeshTransform(0, this.value)">
-			</div>
-
-			<div class="slideContainer">
-				<label for="mesh_translation_y" id="mesh_translation_y_label" >Y:</label>
-				<input id="mesh_translation_y" type="range" min="-50" max="50" step="0.001" value="0" class="slider" oninput="updateMeshTransform(1, this.value)">
-			</div>
-			
-			<div class="slideContainer">
-				<label for="mesh_translation_z" id="mesh_translation_z_label" >Z:</label>
-				<input id="mesh_translation_z" type="range" min="-150" max="150" step="0.001" value="0" class="slider" oninput="updateMeshTransform(2, this.value)">
-			</div>
+		<div>
+			<style type="text/css">
+				.tg  {border-collapse:collapse;border-spacing:0;}
+				.tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+				  overflow:hidden;padding:10px 5px;word-break:normal;}
+				.tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+				  font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}
+				.tg .tg-1wig{font-weight:bold;text-align:left;vertical-align:top}
+				.tg .tg-0lax{text-align:left;vertical-align:top}
+				</style>
+				<table class="tg">
+				<thead>
+				  <tr>
+					<th class="tg-1wig">Left click:</th>
+					<th class="tg-0lax">Rotate about X/Y</th>
+				  </tr>
+				</thead>
+				<tbody>
+				  <tr>
+					<td class="tg-1wig">Middle click:</td>
+					<td class="tg-0lax">Uniform scale</td>
+				  </tr>
+				  <tr>
+					<td class="tg-1wig">Right click:</td>
+					<td class="tg-0lax">Translate</td>
+				  </tr>
+				</tbody>
+				</table>
 		</div>
 
-        <br>
-        <h4>Mesh Rotation:</h4>
-        <div class="slideContainer">
-			<label for="mesh_rotation_x" id="mesh_rotation_x_label" >X:</label>
-            <input id="mesh_rotation_x" type="range" min="-360" max="360" step="0.001" value="0" class="slider" oninput="updateMeshTransform(3, this.value)">
-        </div>
-
-        <div class="slideContainer">
-			<label for="mesh_rotation_y" id="mesh_rotation_y_label" >Y:</label>
-            <input id="mesh_rotation_y" type="range" min="-360" max="360" step="0.001" value="0" class="slider" oninput="updateMeshTransform(4, this.value)">
-        </div>
-        
-        <div class="slideContainer">
-			<label for="mesh_rotation_z" id="mesh_rotation_z_label" >Z:</label>
-            <input id="mesh_rotation_z" type="range" min="-360" max="360" step="0.001" value="0" class="slider" oninput="updateMeshTransform(5, this.value)">
-        </div>
-        
+        <!-- Index values representing the transform type passed here must match the values defined in ./scripts/shared.js -->
 		<br>
-        <h4>Mesh Scale:</h4>
+        <h4>Non-uniform Scale:</h4>
         <div class="slideContainer">
 			<label for="mesh_scale_x" id="mesh_scale_x_label" >X:</label>
-            <input id="mesh_scale_x" type="range" min="0.01" max="10" step="0.1" value="0" class="slider" oninput="updateMeshTransform(6, this.value)">
+            <input id="mesh_scale_x" type="range" min="0.01" max="5" step="0.1" value="1" class="slider" oninput="updateMeshTransform(6, this.value)">
         </div>
 
         <div class="slideContainer">
 			<label for="mesh_scale_y" id="mesh_scale_y_label" >Y:</label>
-            <input id="mesh_scale_y" type="range" min="0.01" max="10" step="0.1" value="0" class="slider" oninput="updateMeshTransform(7, this.value)">
+            <input id="mesh_scale_y" type="range" min="0.01" max="5" step="0.1" value="1" class="slider" oninput="updateMeshTransform(7, this.value)">
         </div>
 
         <div class="slideContainer">
 			<label for="mesh_scale_z" id="mesh_scale_z_label" >Z:</label>
-            <input id="mesh_scale_z" type="range" min="0.01" max="10" step="0.1" value="0" class="slider" oninput="updateMeshTransform(8, this.value)">
+            <input id="mesh_scale_z" type="range" min="0.01" max="5" step="0.1" value="1" class="slider" oninput="updateMeshTransform(8, this.value)">
         </div>
 
-		<!-- TODO: Implement camera controls -->
 
     </body>
 
