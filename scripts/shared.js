@@ -56,109 +56,58 @@ const SUBDIVISION_TYPE =
 }
 
 
-// Transformation type signal enum:
-const TRANSFORM_TYPE = 
+/*  ------------ HELPER FUNCTIONS ------------
+*
+*/
+
+// Helper function: Load a .obj mesh file from a URL
+// Note: Due to security restrictions, we can't load local files, so we load via a URL instead
+function loadOBJFromURL(fileURL)
 {
-    TRANSLATE_X : 0,
-    TRANSLATE_Y : 1,
-    TRANSLATE_Z : 2,
+    console.log("[renderObjects::mesh::loadMeshFromFile] Loading file from URL \"" + fileURL + "\"");
 
-    ROTATE_X    : 3,
-    ROTATE_Y    : 4,
-    ROTATE_Z    : 5,
-
-    SCALE_X     : 6,
-    SCALE_Y     : 7,
-    SCALE_Z     : 8,
-}
-
-
-// Transform class
-// Shared by various render and scene objects
-class transform
-{
-    _position        = [0.0, 0.0, 0.0];
-    _rotation        = quat.create();
-    _scale           = [1.0, 1.0, 1.0];
-
-    _rotationEuler   = [0.0, 0.0, 0.0];
-
-    constructor()
-    {
-
-    }
-
-
-    // Update the transformation
-    // 
-    updateTransform(transformType, transformVal)
-    {
-        switch(transformType)
-        {
-            // TRANSLATION:
-            case TRANSFORM_TYPE.TRANSLATE_X:
-                {
-                    this._position[0] = transformVal;
-                }
-            break;
+    var client = new XMLHttpRequest();
     
-            case TRANSFORM_TYPE.TRANSLATE_Y:
-                {
-                    this._position[1] = transformVal;
-                }
-            break;
-    
-            case TRANSFORM_TYPE.TRANSLATE_Z:
-            {
-                this._position[2] = transformVal;
-            }
-            break;
+    client.open('GET', fileURL);
+    client.onreadystatechange = function()
+    {
+		switch(client.readyState)	// https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/readyState
+		{
+			case 0:	// UNSENT
+			{
+				console.log("[renderObjects::mesh::loadMeshFromFile] Client ready state: UNSENT...");
+			}
+			break;
 
-            // ROTATION:
-            case TRANSFORM_TYPE.ROTATE_X:
-            {
-                this._rotationEuler[0] = transformVal;
-                quat.fromEuler(this._rotation, this._rotationEuler[0], this._rotationEuler[1], this._rotationEuler[2]);
-            }
-            break;
+			case 1:	// OPENED
+			{
+				console.log("[renderObjects::mesh::loadMeshFromFile] Client ready state: OPENED...");
+			}
+			break;
 
-            case TRANSFORM_TYPE.ROTATE_Y:
-            {
-                this._rotationEuler[1] = transformVal;
-                quat.fromEuler(this._rotation, this._rotationEuler[0], this._rotationEuler[1], this._rotationEuler[2]);
-            }
-            break;
+			case 2:	// HEADERS_RECEIVED
+			{
+				console.log("[renderObjects::mesh::loadMeshFromFile] Client ready state: HEADERS_RECEIVED...");
+			}
+			break;
 
-            case TRANSFORM_TYPE.ROTATE_Z:
-            {
-                this._rotationEuler[2] = transformVal;
-                quat.fromEuler(this._rotation, this._rotationEuler[0], this._rotationEuler[1], this._rotationEuler[2]);
-            }
-            break;
+			case 3:	// LOADING
+			{
+				console.log("[renderObjects::mesh::loadMeshFromFile] Client ready state: LOADING...");
+			}
+			break;
+			
+			case 4:	// DONE
+			{
+				console.log("[renderObjects::mesh::loadMeshFromFile] Client ready state: DONE!");
 
-            // SCALE:
-            case TRANSFORM_TYPE.SCALE_X:
-            {
-                this._scale[0] = transformVal;
-            }
-            break;
-
-            case TRANSFORM_TYPE.SCALE_Y:
-            {
-                this._scale[1] = transformVal;
-            }
-            break;
-
-            case TRANSFORM_TYPE.SCALE_Z:
-            {
-                this._scale[2] = transformVal;
-            }
-            break;
-            
-            default:
-                console.log("[transform::updateTransform] Invalid transformation type received!");
-        }
+				// Load the received OBJ:
+				theSceneManager._scene._renderObject._mesh.constructMeshFromOBJData(client.responseText);	
+			}
+			break;
+		}  
     }
+    client.send();
 }
 
 

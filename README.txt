@@ -6,15 +6,12 @@ Launch by loading index.html in a (preferably Chrome) brower.
 
 This code was developed and tested using the Chrome browser with Windows 10. It also has been verified to work with the Windows Edge browser.
 
-The following resources were consulted during the creation of this project:
-- Winged edge reference material:
-	- https://en.wikipedia.org/wiki/winged_edge#:~:text=in%20computer%20graphics%2c%20the%20winged,edge%20records%2c%20and%20face%20records.
-	- https://people.cs.clemson.edu/~dhouse/courses/405/papers/winged-edge.pdf
-	- https://pages.mtu.edu/~shene/courses/cs3621/notes/model/winged-e.html	
- - Edge decimation papers:
-		http://mgarland.org/files/papers/quadrics.pdf
-		http://www.graphics.rwth-aachen.de/media/papers/mcd_vmv021.pdf
 
+Controls:
+---------
+Left click: Rotate
+Right click: Translate
+Middle mouse: Scale
 
 
 A note on the number of edges collapsed per iteration:
@@ -27,12 +24,22 @@ This strategy avoids any bias in the random edge selection, but may result in th
 
 Additionally, to maintain a closed triangle mesh, this program will not collapse edges once there are 6 remaining edges in the mesh. This is implemented via both a UI check, and checks within the decimation code that will terminate edge collapse once the number of edges is reduced to 6.
 
-
+References:
+-----------
+The following resources were consulted during the creation of this project:
+- Winged edge reference material:
+	- https://en.wikipedia.org/wiki/winged_edge#:~:text=in%20computer%20graphics%2c%20the%20winged,edge%20records%2c%20and%20face%20records.
+	- https://people.cs.clemson.edu/~dhouse/courses/405/papers/winged-edge.pdf
+	- https://pages.mtu.edu/~shene/courses/cs3621/notes/model/winged-e.html	
+ - Edge decimation papers:
+		http://mgarland.org/files/papers/quadrics.pdf
+		http://www.graphics.rwth-aachen.de/media/papers/mcd_vmv021.pdf
 
 
 TODO:
 -----
 - Mouse controls
 - Change decimation controls to percentages of edges
-
+- Display console output within web page
+- Load meshes via a dropdown -> Optionally take a URL?
  

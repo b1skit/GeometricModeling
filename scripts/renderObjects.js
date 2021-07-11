@@ -5,6 +5,145 @@
 // adambadke@gmail.com
 
 
+// Transformation type signal enum:
+const TRANSFORM_TYPE = 
+{
+    TRANSLATE_X : 0,
+    TRANSLATE_Y : 1,
+    TRANSLATE_Z : 2,
+
+    ROTATE_X    : 3,
+    ROTATE_Y    : 4,
+    ROTATE_Z    : 5,
+
+    SCALE_X     : 6,
+    SCALE_Y     : 7,
+    SCALE_Z     : 8,
+}
+
+
+/* 	TRANSFORM CLASS
+*	Shared by various render and scene objects
+*/
+class transform
+{
+    _position        = [0.0, 0.0, 0.0];
+    _rotation        = quat.create();
+    _scale           = [1.0, 1.0, 1.0];
+
+    _rotationEuler   = [0.0, 0.0, 0.0];
+
+    constructor()
+    {
+
+    }
+
+
+    // Update the transformation
+    // 
+    updateTransform(transformType, transformVal)
+    {
+        switch(transformType)
+        {
+            // TRANSLATION:
+            case TRANSFORM_TYPE.TRANSLATE_X:
+                {
+                    this._position[0] = transformVal;
+                }
+            break;
+    
+            case TRANSFORM_TYPE.TRANSLATE_Y:
+                {
+                    this._position[1] = transformVal;
+                }
+            break;
+    
+            case TRANSFORM_TYPE.TRANSLATE_Z:
+            {
+                this._position[2] = transformVal;
+            }
+            break;
+
+            // ROTATION:
+            case TRANSFORM_TYPE.ROTATE_X:
+            {
+                this._rotationEuler[0] = transformVal;
+                quat.fromEuler(this._rotation, this._rotationEuler[0], this._rotationEuler[1], this._rotationEuler[2]);
+            }
+            break;
+
+            case TRANSFORM_TYPE.ROTATE_Y:
+            {
+                this._rotationEuler[1] = transformVal;
+                quat.fromEuler(this._rotation, this._rotationEuler[0], this._rotationEuler[1], this._rotationEuler[2]);
+            }
+            break;
+
+            case TRANSFORM_TYPE.ROTATE_Z:
+            {
+                this._rotationEuler[2] = transformVal;
+                quat.fromEuler(this._rotation, this._rotationEuler[0], this._rotationEuler[1], this._rotationEuler[2]);
+            }
+            break;
+
+            // SCALE:
+            case TRANSFORM_TYPE.SCALE_X:
+            {
+                this._scale[0] = transformVal;
+            }
+            break;
+
+            case TRANSFORM_TYPE.SCALE_Y:
+            {
+                this._scale[1] = transformVal;
+            }
+            break;
+
+            case TRANSFORM_TYPE.SCALE_Z:
+            {
+                this._scale[2] = transformVal;
+            }
+            break;
+            
+            default:
+                console.log("[transform::updateTransform] Invalid transformation type received!");
+        }
+    }
+
+
+	// Get the model matrix for this object:
+	getModelMatrix()
+	{
+		// Note: gl-matrix has a "helpful" feature, where the built-in scale/rotate/translate don't multiply
+		// matrices in the order you'd expect. To avoid getting super confused and wasting several hours
+		// questioning your mathematic abilities, just construct discrete scale/rotate/translate matrices,
+		// and then manually multiply them
+		// https://github.com/toji/gl-matrix/issues/103
+		
+		// Scale:
+		var scaleMatrix = mat4.create();
+		mat4.scale(scaleMatrix, scaleMatrix, this._scale);
+
+		// Rotate:
+		var rotateMatrix        = mat4.create();
+		var rotationQuatAsMat4  = mat4.create();
+		mat4.fromQuat(rotationQuatAsMat4, this._rotation);
+		mat4.multiply(rotateMatrix, rotationQuatAsMat4, rotateMatrix);
+		
+		// Translate:
+		var translateMatrix = mat4.create();
+		mat4.translate(translateMatrix, translateMatrix, this._position);
+		
+		// Apply transformations to achieve TRS ordering:
+		var modelMatrix = mat4.create();
+		mat4.multiply(modelMatrix, scaleMatrix, modelMatrix);
+		mat4.multiply(modelMatrix, rotateMatrix, modelMatrix);
+		mat4.multiply(modelMatrix, translateMatrix, modelMatrix);
+
+		return modelMatrix;
+	}
+}
+
 
 /*  RENDEROBJECT CLASS
 *
@@ -34,40 +173,6 @@ class renderObject
 		this._mesh.setActiveShadingMode(shadingMode);
 	}
 
-
-    // Get the model matrix for this object:
-    getModelMatrix()
-    {
-        // Note: gl-matrix has a "helpful" feature, where the built-in scale/rotate/translate don't multiply
-        // matrices in the order you'd expect. To avoid getting super confused and wasting several hours
-        // questioning your mathematic abilities, just construct discrete scale/rotate/translate matrices,
-        // and then manually multiply them
-        // https://github.com/toji/gl-matrix/issues/103
-        
-		// TODO: Move this to the transform class
-
-        // Scale:
-        var scaleMatrix = mat4.create();
-        mat4.scale(scaleMatrix, scaleMatrix, this._transform._scale);
-
-        // Rotate:
-        var rotateMatrix        = mat4.create();
-        var rotationQuatAsMat4  = mat4.create();
-        mat4.fromQuat(rotationQuatAsMat4, this._transform._rotation);
-        mat4.multiply(rotateMatrix, rotationQuatAsMat4, rotateMatrix);
-        
-        // Translate:
-        var translateMatrix = mat4.create();
-        mat4.translate(translateMatrix, translateMatrix, this._transform._position);
-        
-        // Apply transformations to achieve TRS ordering:
-        var modelMatrix = mat4.create();
-        mat4.multiply(modelMatrix, scaleMatrix, modelMatrix);
-        mat4.multiply(modelMatrix, rotateMatrix, modelMatrix);
-        mat4.multiply(modelMatrix, translateMatrix, modelMatrix);
-
-        return modelMatrix;
-    }
 }
 
 
@@ -204,59 +309,4 @@ class shader
             theValue
 		);
 	}
-}
-
-
-/*  ------------ HELPER FUNCTIONS ------------
-*
-*/
-
-// Helper function: Load a .obj mesh file from a URL
-// Note: Due to security restrictions, we can't load local files, so we load via a URL instead
-function loadOBJFromURL(fileURL)
-{
-    console.log("[renderObjects::mesh::loadMeshFromFile] Loading file from URL \"" + fileURL + "\"");
-
-    var client = new XMLHttpRequest();
-    
-    client.open('GET', fileURL);
-    client.onreadystatechange = function()
-    {
-		switch(client.readyState)	// https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/readyState
-		{
-			case 0:	// UNSENT
-			{
-				console.log("[renderObjects::mesh::loadMeshFromFile] Client ready state: UNSENT...");
-			}
-			break;
-
-			case 1:	// OPENED
-			{
-				console.log("[renderObjects::mesh::loadMeshFromFile] Client ready state: OPENED...");
-			}
-			break;
-
-			case 2:	// HEADERS_RECEIVED
-			{
-				console.log("[renderObjects::mesh::loadMeshFromFile] Client ready state: HEADERS_RECEIVED...");
-			}
-			break;
-
-			case 3:	// LOADING
-			{
-				console.log("[renderObjects::mesh::loadMeshFromFile] Client ready state: LOADING...");
-			}
-			break;
-			
-			case 4:	// DONE
-			{
-				console.log("[renderObjects::mesh::loadMeshFromFile] Client ready state: DONE!");
-
-				// Load the received OBJ:
-				theSceneManager._scene._renderObject._mesh.constructMeshFromOBJData(client.responseText);	
-			}
-			break;
-		}  
-    }
-    client.send();
 }

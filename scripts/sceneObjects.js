@@ -111,7 +111,7 @@ class sceneManager
 	configureShaderForCurrentRender(activeShader, isWireframe = false)
 	{
 		// Assemble the model view (MV) matrix:
-		const modelMatrix = this._scene._renderObject.getModelMatrix();
+		const modelMatrix = this._scene._renderObject._transform.getModelMatrix();
 
 		const viewMatrix = this._scene._camera.getViewMatrix();
 
