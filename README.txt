@@ -9,9 +9,9 @@ This code was developed and tested using the Chrome browser with Windows 10. It 
 
 Controls:
 ---------
-Left click: 	Rotate about X/Y
-Middle mouse: 	Scale
-Right click: 	Translate
+Left click: 		Rotate about X/Y
+Scroll: 			Scale
+Right/middle click: Translate
 
 
 A note on the number of edges collapsed per iteration:
@@ -39,6 +39,8 @@ The following resources were consulted during the creation of this project:
 TODO:
 -----
 - Change decimation controls to percentages of edges
+- Change subdivision to just do a single iteration per click (no slider)
 - Display console output within web page
-- Load meshes via a dropdown -> Optionally take a URL?
+- Print warnings if subdivision/decimation will be slow...
+- Move .OBJs to personal web hosting -> Correct any issues (eg. center @ origin etc)
  

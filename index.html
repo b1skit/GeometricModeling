@@ -42,14 +42,40 @@
 
         <h3>Mesh Selection:</h3>
 
-		<div class="buttonGroup">
-			<button onclick="loadOBJ(document.getElementById('urlInput').value)">Load mesh file</button>
+		<div>
 
-			<label for="urlInput" id="urlInputLabel" >Mesh .OBJ URL:</label>
-			<input type="text" id="urlInput" value="https://gist.githubusercontent.com/MaikKlein/0b6d6bb58772c13593d0a0add6004c1c/raw/48cf9c6d1cdd43cc6862d7d34a68114e2b93d497/cube.obj" >
+			
+			<div class="float-container">
+				<div class="float-child">
+					<div class="buttonGroup">
+						<button onclick="loadOBJ()">Load mesh file</button>
+					</div>
+				</div>
+
+				<div class="float-child">
+					<select id="meshOBJDropdown">
+						<option value="https://gist.githubusercontent.com/MaikKlein/0b6d6bb58772c13593d0a0add6004c1c/raw/48cf9c6d1cdd43cc6862d7d34a68114e2b93d497/cube.obj" selected="selected">Cube</option>
+						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/horse_s.obj">Horse_s</option>
+						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/goodhand.obj">Goodhand</option>
+						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/venus.obj">Venus</option>
+						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/wheel.obj">Wheel</option>
+						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/walking_monster.obj">Walking Monster</option>
+						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/horse.obj">Horse</option>
+						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/subdivision/chess_piece.obj">Chess Piece</option>
+						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/subdivision/small_horse.obj">Small Horse</option>
+						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/armhand.obj">Arm Hand</option>
+						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/bigfish.obj">Big Fish</option>
+						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/bigsmile.obj">Big Smile</option>
+						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/horse.obj">Horse</option>
+						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/man.obj">Man</option>
+						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/nice8.obj">Nice 8</option>
+					</select>
+				</div>
+			</div>
 		</div>
-		
-		<p></p>
+
+		<br style = "clear: left">
+
         <div class="buttonGroup">
 			
             <button onclick="downloadOBJ(document.getElementById('filenameInput').value)">Download mesh file</button>
@@ -64,8 +90,8 @@
 
         <div class="buttonGroup">
             <button onclick="setActiveShadingMode(0)">Flat Shading</button>
-            <button onclick="setActiveShadingMode(1)">Smooth Shading</button>
 			<button onclick="setActiveShadingMode(2)">Wireframe Shading</button>
+			<button onclick="setActiveShadingMode(1)">Smooth Shading</button>
             <button onclick="setActiveShadingMode(3)">Smooth + Wireframe Shading</button>
         </div>
 
@@ -127,11 +153,11 @@
 				</thead>
 				<tbody>
 				  <tr>
-					<td class="tg-1wig">Middle click:</td>
+					<td class="tg-1wig">Scroll wheel:</td>
 					<td class="tg-0lax">Uniform scale</td>
 				  </tr>
 				  <tr>
-					<td class="tg-1wig">Right click:</td>
+					<td class="tg-1wig">Right/middle click:</td>
 					<td class="tg-0lax">Translate</td>
 				  </tr>
 				</tbody>

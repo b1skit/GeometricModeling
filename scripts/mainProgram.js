@@ -56,8 +56,11 @@ function decimateMesh(numEdges, k)
 }
 
 
-function loadOBJ(objURL)
+// function loadOBJ(objURL)
+function loadOBJ()
 {
+	var objURL = document.getElementById("meshOBJDropdown");
+
 	// DEBUG: Override URLS
 	//objURL = 'http://www.sfu.ca/~abadke/temp/pyramid.obj';
 	// objURL = 'http://www.sfu.ca/~abadke/temp/splitPyramid.obj';
@@ -82,12 +85,12 @@ function loadOBJ(objURL)
 	// objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/horse.obj';
 	// objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/man.obj';
 	// objURL = 'https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/nice8.obj';
-	
+
 	// Create a new render object and add it to the scene:
 	theRenderObject = new renderObject();
 	theSceneManager._scene.setRenderObject(theRenderObject);
-	
-	loadOBJFromURL(objURL);
+		
+	loadOBJFromURL(objURL.value);
 }
 
 
@@ -169,9 +172,16 @@ var eventHandler = function(event)
 					break;
 				}
 			}
-
 			break;
 		}
+
+		case "wheel":
+		{
+			updateMeshTransform(TRANSFORM_TYPE.SCALE_UNIFORM, event.deltaY * 0.1);
+
+			event.preventDefault();	// Prevent the page from scrolling
+		}
+		break;
 
 		case "mousemove":
 		{
@@ -183,19 +193,21 @@ var eventHandler = function(event)
 			
 			if (middleMouseDown)
 			{
-				if (Math.abs(event.movementX) > Math.abs(event.movementY))
-				{
-					updateMeshTransform(TRANSFORM_TYPE.SCALE_UNIFORM, event.movementX);
-				}
-				else
-				{
-					updateMeshTransform(TRANSFORM_TYPE.SCALE_UNIFORM, event.movementY);
-				}				
+				// if (Math.abs(event.movementX) > Math.abs(event.movementY))
+				// {
+				// 	updateMeshTransform(TRANSFORM_TYPE.SCALE_UNIFORM, event.movementX);
+				// }
+				// else
+				// {
+				// 	updateMeshTransform(TRANSFORM_TYPE.SCALE_UNIFORM, event.movementY);
+				// }				
+
+				updateMeshTransform(TRANSFORM_TYPE.TRANSLATE_X, event.movementX / canvas.width);
+				updateMeshTransform(TRANSFORM_TYPE.TRANSLATE_Y, -event.movementY / canvas.width)
 			}
 
 			if (rightMouseDown)
 			{
-
 				updateMeshTransform(TRANSFORM_TYPE.TRANSLATE_X, event.movementX / canvas.width);
 				updateMeshTransform(TRANSFORM_TYPE.TRANSLATE_Y, -event.movementY / canvas.width);
 			}
@@ -207,6 +219,8 @@ var eventHandler = function(event)
 			console.log("[mainProgram][eventHandler] Error: Unhandled event type received");
 	}
 }
+
+
 
 
 /*	Main program:
@@ -230,6 +244,7 @@ function main()
 	canvas.addEventListener("mousedown", eventHandler, false);
 	canvas.addEventListener("mouseup", eventHandler, false);
 	canvas.addEventListener("mousemove", eventHandler, false);
+	canvas.addEventListener("wheel", eventHandler, false);
 	
     console.log("[mainProgram::main] Successfully initialized WebGL!");
 

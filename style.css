@@ -11,21 +11,21 @@ video
 
 .buttonGroup button 
 {
-    color:              white;               /* Text color */
-    background-color:   black;
-    border:             2px solid gray;
-    padding:            8px 18px;
-    float:              center;
+	color:              white;               /* Text color */
+	background-color:   black;
+	border:             2px solid gray;
+	padding:            8px 18px;
+	float:              center;
 }
 
 .buttonGroup button:hover
 {
-    background-color: teal;
+	background-color: teal;
 }
 
 .slideContainer
 {
-    float:              left;
+	float:              left;
 	width: 30%;
 }
 
@@ -33,4 +33,23 @@ video
 .slider
 {
 	width: 90%;
+}
+
+
+
+
+.float-container
+{
+	padding-top: 20px;
+}
+
+.float-child
+{
+	width: 20%;
+	float: left;
+
+	margin: auto;
+	top: 50%;
+	-ms-transform: translateY(-50%);
+	transform: translateY(-50%);
 }
