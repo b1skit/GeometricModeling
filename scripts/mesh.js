@@ -301,12 +301,7 @@ class mesh
 	// Remove a directed edge from our edge table
 	removeEdge(originVertIndex, destVertIndex)
 	{
-		var edgeID = this.getEdgeIdentifier(originVertIndex, destVertIndex);
-
-		if(this._edges.has(edgeID))
-		{
-			this._edges.delete(edgeID); // CAN WE JUST SAFELY DELETE WITHOUT CHECKING?!?!?!?!?!
-		}
+		this._edges.delete( this.getEdgeIdentifier(originVertIndex, destVertIndex) );		
 	}
 
 

@@ -42,5 +42,5 @@ TODO:
 - Change subdivision to just do a single iteration per click (no slider)
 - Display console output within web page
 - Print warnings if subdivision/decimation will be slow...
-- Move .OBJs to personal web hosting -> Correct any issues (eg. center @ origin etc)
+- Move .OBJs to personal web hosting -> Correct any issues (eg. center pivots @ origin etc)
  
