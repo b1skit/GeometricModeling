@@ -177,7 +177,7 @@ var eventHandler = function(event)
 
 		case "wheel":
 		{
-			updateMeshTransform(TRANSFORM_TYPE.SCALE_UNIFORM, event.deltaY * 0.1);
+			updateMeshTransform(TRANSFORM_TYPE.SCALE_UNIFORM, event.deltaY * -0.1);
 
 			event.preventDefault();	// Prevent the page from scrolling
 		}
