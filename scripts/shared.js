@@ -102,12 +102,19 @@ function loadOBJFromURL(fileURL)
 				console.log("[renderObjects::mesh::loadMeshFromFile] Client ready state: DONE!");
 
 				// Load the received OBJ:
-				theSceneManager._scene._renderObject._mesh.constructMeshFromOBJData(client.responseText);	
+				theSceneManager._scene._renderObject._mesh.constructMeshFromOBJData(client.responseText);
 			}
 			break;
 		}  
     }
     client.send();
+}
+
+
+// Helper function: Load a .obj from a text string. Allows fast loading of objs stored in Javascript
+function loadOBJFromString(objString)
+{
+	theSceneManager._scene._renderObject._mesh.constructMeshFromOBJData(objString);
 }
 
 

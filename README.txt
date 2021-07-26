@@ -39,8 +39,6 @@ The following resources were consulted during the creation of this project:
 TODO:
 -----
 - Change decimation controls to percentages of edges
-- Change subdivision to just do a single iteration per click (no slider)
 - Display console output within web page
 - Print warnings if subdivision/decimation will be slow...
-- Move .OBJs to personal web hosting -> Correct any issues (eg. center pivots @ origin etc)
  

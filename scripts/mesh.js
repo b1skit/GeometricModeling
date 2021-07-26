@@ -338,6 +338,28 @@ class mesh
 	}
 
 
+	// Get a vertex in our vertex dictionary
+	getVertex(vertID)
+	{
+
+	}
+
+
+	// Add a vertex to our vertex dictionary
+	// NOTE: theVert._vertIndex must be correctly set
+	addVertex(theVert)
+	{
+
+	}
+
+
+	// Remove a vertex from our vertex dictionary
+	removeVertex(vertIndex)
+	{
+		// TODO: SHOULD WE TAKE AN INDEX, OR A VERTEX REFERECE (AND GET THE INDEX FROM THAT)??????
+	}
+
+
 	// Get the number of edges connected to a vertex
 	getVertexDegree(vertexIndex)
 	{
@@ -1813,7 +1835,7 @@ class mesh
 		{
 			console.log("PRIMITIVE CLEANUP COMPLETE!");
 			this.validateMesh();
-		}		
+		}
 	}
 
 
