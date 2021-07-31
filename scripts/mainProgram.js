@@ -122,7 +122,6 @@ function loadOBJ()
 		default:
 			console.log("[mainProgram][loadOBJ] ERROR: Invalid object string received");
 	}
-	
 }
 
 
@@ -267,6 +266,9 @@ function reinitialize()
     
     // Render our scene!
     theSceneManager.renderScene(performance.now()); // Pass the time since origin
+
+	// (Re)Set the shading mode to ensure the GUI and code stay in sync:
+	setActiveShadingMode( document.getElementById('shadingModeDropdown').value );
 }
 
 
