@@ -31,7 +31,7 @@ function updateMeshTransform(transformType, transformVal)
 // Shading controls:
 function setActiveShadingMode(shadingMode)
 {
-	theSceneManager.setActiveShadingMode(shadingMode);
+	theSceneManager.setActiveShadingMode( parseInt(shadingMode) );
 }
 
 
