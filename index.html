@@ -41,119 +41,142 @@
 
     </head>
 
-    <body oncontextmenu="return false;"> <!-- Disable the context menu to prevent popups when dragging right mouse -->
+    <body style="background-color:rgb(242,242,242);" oncontextmenu="return false;"> <!-- Disable the context menu to prevent popups when dragging right mouse -->
         <canvas id="glCanvas" width="640" height="480"></canvas>
 
 
         <p>Please open your browser's debug console to see program output.</p>
 
 
-        <h3>Mesh Selection:</h3>
+		<div class="float-container">
 
-		<div>
+			<h3>Mesh Configuration:</h3>
+			<div class="float-child">
+				<h4>Mesh Selection:</h4>
+			</div>
 
+			<div class="float-child">
+				<select id="meshOBJDropdown" onchange="loadOBJ()">
+
+					<!-- Portfolio mode: Load .obj files quickly from a JS string -->
+					<option value="cube" selected="selected">Cube</option>
+					<option value="chessPiece">Chess Piece</option>
+					<option value="venus">Venus</option>
+					<option value="horse">Horse</option>
+					<option value="figureEight">Figure Eight</option>
+					<option value="gear">Gear</option>
+					
+				</select>
+			</div>
 			
-			<div class="float-container">
-				<div class="float-child">
-					<div class="buttonGroup">
-						<button onclick="loadOBJ()">Load mesh file</button>
-					</div>
+			<div class="float-child">
+				<h4>Display Mode:</h4>
+			</div>
+
+			<div class="float-child">
+				<select id="shadingModeDropdown" onchange="setActiveShadingMode(document.getElementById('shadingModeDropdown').value)">
+
+					<option value="0">Flat Shading</option>
+					<option value="2">Wireframe Shading</option>
+					<option value="1">Smooth Shading</option>
+					<option value="3" selected="selected">Smooth Wireframe Shading</option>
+
+					
+				</select>
+			</div>
+		</div>
+		<p style="clear:left; height: 0px;"></p>
+
+
+		
+		<div class="float-container">
+			<h3>Mesh Subdivision:</h3>
+
+			<div class="float-child float-leftCol">
+				<label>Subdivision Scheme:</label>
+			</div>
+
+			<div class="float-child float-midCol">
+				<select name="subdivisionDropdown" id="subdivisionType">
+					<option value="0">Loop</option>
+					<option value="1">Butterfly</option>
+				</select>
+			</div>
+
+
+			<div class="float-child">
+				
+				<div class="buttonGroup">
+					<button onclick="subdivideMesh(document.getElementById('subdivisionType').value, 1)">Subdivide!</button>
 				</div>
 
-				<div class="float-child">
-					<select id="meshOBJDropdown">
-						<!-- <option value="https://gist.githubusercontent.com/MaikKlein/0b6d6bb58772c13593d0a0add6004c1c/raw/48cf9c6d1cdd43cc6862d7d34a68114e2b93d497/cube.obj" selected="selected">Cube</option>
-						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/horse_s.obj">Horse_s</option>
-						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/goodhand.obj">Goodhand</option>
-						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/venus.obj">Venus</option>
-						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/wheel.obj">Wheel</option>
-						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/walking_monster.obj">Walking Monster</option>
-						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/horse.obj">Horse</option>
-						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/subdivision/chess_piece.obj">Chess Piece</option>
-						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a1/subdivision/small_horse.obj">Small Horse</option>
-						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/armhand.obj">Arm Hand</option>
-						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/bigfish.obj">Big Fish</option>
-						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/bigsmile.obj">Big Smile</option>
-						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/man.obj">Man</option>
-						<option value="https://www.cs.sfu.ca/~haoz/teaching/cmpt464/assign/a2/OBJ_files/nice8.obj">Nice 8</option> -->
+			</div>
+			
+		</div>
+		<p style="clear:left; height: 0px;"></p>
 
-						<!-- Portfolio mode: Load .obj files quickly from a JS string -->
-						<option value="cube" selected="selected">Cube</option>
-						<option value="chessPiece">Chess Piece</option>
-						<option value="venus">Venus</option>
-						<option value="horse">Horse</option>
-						<option value="figureEight">Figure Eight</option>
-						<option value="gear">Gear</option>
-						
-					</select>
+       
+
+		<div class="float-container">
+			<h3>Mesh Decimation:</h3>
+			<div class="float-child float-leftCol">
+				<div class="float-underOver">
+					<label for="decimationText" id="decimationTextLabel"># Edges to collapse:</label>
+				</div>
+
+				<div class="float-underOver">
+					<label for="kText" id="kTextLabel"># Edges to consider (k):</label>
+					<!-- <input name="numKText" id="kText" type="text" value="8"> -->
+				</div>
+			</div>
+
+			<div class="float-child float-midCol">
+				<div class="float-underOver">
+					<input name="numDecimatedEdgesText" id="decimationText" type="text" value="10" size="4">
+				</div>
+
+				<div class="float-underOver">
+					<input name="numKText" id="kText" type="text" value="8" size="4">
+				</div>
+			</div>
+
+			<div class="float-child">
+				<div class="buttonGroup">
+					<button onclick="decimateMesh(document.getElementById('decimationText').value, document.getElementById('kText').value)">Decimate!</button>
 				</div>
 			</div>
 		</div>
+		<p style="clear:left; height: 0px;"></p>
 
-		<br style = "clear: left">
 
-        <div class="buttonGroup">
+
+		
+		<div class="float-container">
+			<h3>Export Results:</h3>
+			<div class="float-child float-leftCol">
+				<label for="filenameInput" id="filenameInputLabel" >File name:</label>
+			</div>
+
+			<div class="float-child float-midCol">
+				<input type="text" id="filenameInput" value="result.obj" size="8">
+			</div>
+
+
+			<div class="float-child">
+				
+				<div class="buttonGroup">
+					<button onclick="downloadOBJ(document.getElementById('filenameInput').value)">Download .OBJ</button>
+				</div>
+
+			</div>
 			
-            <button onclick="downloadOBJ(document.getElementById('filenameInput').value)">Download mesh file</button>
-
-			<label for="filenameInput" id="filenameInputLabel" >File name:</label>
-			<input type="text" id="filenameInput" value="result.obj" >
-        </div>
-
-        <br>
-
-        <h3>Mesh Display:</h3>
-
-        <div class="buttonGroup">
-            <button onclick="setActiveShadingMode(0)">Flat Shading</button>
-			<button onclick="setActiveShadingMode(2)">Wireframe Shading</button>
-			<button onclick="setActiveShadingMode(1)">Smooth Shading</button>
-            <button onclick="setActiveShadingMode(3)">Smooth + Wireframe Shading</button>
-        </div>
-
-		<br>
-
-		<h3>Mesh Subdivision:</h3>
-		<div>
-			<label for="subdivisionType">Choose subdivision scheme:</label>
-			<select name="subdivisionDropdown" id="subdivisionType">
-				<option value="0">Loop</option>
-				<option value="1">Butterfly</option>
-			</select>
-
-			<br>
-
-			<!-- <label for="subdivisionSlider" id="subdivisionSliderLabel">Number of subdivision iterations: 1</label>
-			<input name="numSubdivisionsSlider" id="subdivisionSlider" type="range" min="1" max="5" step="1" value="1" class="slider" oninput="document.getElementById('subdivisionSliderLabel').innerHTML = 'Number of subdivision iterations: ' + this.value">
-
-			<div class="buttonGroup">
-				<button onclick="subdivideMesh(document.getElementById('subdivisionType').value, document.getElementById('subdivisionSlider').value)">Subdivide!</button>
-			</div> -->
-
-			<div class="buttonGroup">
-				<button onclick="subdivideMesh(document.getElementById('subdivisionType').value, 1)">Subdivide!</button>
-			</div>
 		</div>
+		<p style="clear:left; height: 0px;"></p>
 
-		<h3>Mesh Decimation:</h3>
+
+        
 		<div>
-			<label for="decimationText" id="decimationTextLabel">Number of edges to collapse:</label>
-			<input name="numDecimatedEdgesText" id="decimationText" type="text" value="1">
-
-			<br>
-
-			<label for="kText" id="kTextLabel">Number of random edges to consider per operation (k):</label>
-			<input name="numKText" id="kText" type="text" value="8">
-
-			<div class="buttonGroup">
-				<button onclick="decimateMesh(document.getElementById('decimationText').value, document.getElementById('kText').value)">Decimate!</button>
-			</div>
-		</div>
-
-        <br>
-
-        <h3>Controls:</h3>
-		<div>
+			<h3>Controls:</h3>
 			<style type="text/css">
 				.tg  {border-collapse:collapse;border-spacing:0;}
 				.tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
@@ -183,8 +206,12 @@
 				</table>
 		</div>
 
-        <!-- Index values representing the transform type passed here must match the values defined in ./scripts/shared.js -->
 		<br>
+
+
+
+        <!-- Index values representing the transform type passed here must match the values defined in ./scripts/shared.js -->
+		<!-- <br>
         <h4>Non-uniform Scale:</h4>
         <div class="slideContainer">
 			<label for="mesh_scale_x" id="mesh_scale_x_label" >X:</label>
@@ -199,7 +226,7 @@
         <div class="slideContainer">
 			<label for="mesh_scale_z" id="mesh_scale_z_label" >Z:</label>
             <input id="mesh_scale_z" type="range" min="0.01" max="5" step="0.1" value="1" class="slider" oninput="updateMeshTransform(8, this.value)">
-        </div>
+        </div> -->
 
 
     </body>

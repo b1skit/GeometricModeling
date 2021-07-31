@@ -129,10 +129,7 @@ class sceneManager
 		activeShader.setUniform3fv(gl, 'in_cameraPosW', this._scene._camera._transform._position);
 
 		// Upload appropriate color:
-		if (!isWireframe)
-		{
-			activeShader.setUniform3fv(gl, 'in_color', isWireframe ? this._scene._renderObject._mesh._material._wireframeColor : this._scene._renderObject._mesh._material._color);
-		}		
+		activeShader.setUniform3fv(gl, 'in_color', isWireframe ? this._scene._renderObject._mesh._material._wireframeColor : this._scene._renderObject._mesh._material._color);	
 	}
 }
 

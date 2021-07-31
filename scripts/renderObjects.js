@@ -206,7 +206,7 @@ class material
     constructor()
     {
 		this._color 			= vec3.fromValues(0.75, 0.75, 0.75);
-		this._wireframeColor 	= vec3.fromValues(1.0, 0.0, 0.0);
+		this._wireframeColor 	= vec3.fromValues(0.263, 1.0, 0.639);
 
 		this._shader = new shader();
 		this._shader.initialize(vsSource_Phong, fsSource_Phong);

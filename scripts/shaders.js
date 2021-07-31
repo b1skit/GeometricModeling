@@ -123,7 +123,6 @@ const fsSource_Wireframe = `
 precision highp float;
 
 // Uniforms:
-uniform vec3 in_cameraPosW;
 uniform vec3 in_color; 			// A single color
 
 // Vertex->Fragment inputs:
@@ -132,6 +131,7 @@ varying vec4 fragColor;
 
 void main()
 {
-	gl_FragColor = fragColor;
+	// gl_FragColor = fragColor;	// Uncomment to use vertex color, for debugging
+	gl_FragColor = vec4(in_color.r, in_color.g, in_color.b, 1.0);
 }
 `;

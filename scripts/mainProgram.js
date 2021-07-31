@@ -59,6 +59,8 @@ function decimateMesh(numEdges, k)
 // function loadOBJ(objURL)
 function loadOBJ()
 {
+	reinitialize();
+
 	// var objURL = document.getElementById("meshOBJDropdown");
 
 	// // DEBUG: Override URLS
@@ -87,6 +89,7 @@ function loadOBJ()
 	// theSceneManager._scene.setRenderObject(theRenderObject);
 		
 	// loadOBJFromURL(objURL.value);
+
 
 
 	// Portfolio mode: Load .obj files quickly from a JS string
@@ -250,6 +253,21 @@ var eventHandler = function(event)
 }
 
 
+// Helper function: Reinitialize the various render objects
+function reinitialize()
+{
+	// Create a scene:
+    theSceneManager = new sceneManager();
+
+    // Create a render object:
+    theRenderObject = new renderObject();
+	
+    // Add the renderObject to the scene:
+    theSceneManager._scene.setRenderObject(theRenderObject);
+    
+    // Render our scene!
+    theSceneManager.renderScene(performance.now()); // Pass the time since origin
+}
 
 
 /*	Main program:
@@ -277,17 +295,10 @@ function main()
 	
     console.log("[mainProgram::main] Successfully initialized WebGL!");
 
-    // Create a scene:
-    theSceneManager = new sceneManager();
+	reinitialize();
 
-    // Create a render object:
-    theRenderObject = new renderObject();
-	
-    // Add the renderObject to the scene:
-    theSceneManager._scene.setRenderObject(theRenderObject);
-    
-    // Render our scene!
-    theSceneManager.renderScene(performance.now()); // Pass the time since origin
+	// Ensure the first selected mesh is automatically rendered:
+	loadOBJ();
 }
 
 

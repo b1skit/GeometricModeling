@@ -1,7 +1,7 @@
 canvas
 {
 	border: 2px solid black;
-	background-color: black;
+	background-color: rgb(16,18,20);
 }
 
 video
@@ -9,18 +9,28 @@ video
 	display: none;
 }
 
+body
+{
+	font-family: Muli, sans-serif;
+}
+
 .buttonGroup button 
 {
-	color:              white;               /* Text color */
-	background-color:   black;
-	border:             2px solid gray;
+	color:              rgb(242,242,242);               /* Text color */
+	background-color: rgb(33,37,41);
+	border:             2px solid rgb(33,37,41);
 	padding:            8px 18px;
 	float:              center;
+
+	width: 135px;
 }
 
 .buttonGroup button:hover
 {
-	background-color: teal;
+	/* background-color: teal; */
+	/* background-color: rgb(33,37,41); */
+
+	background-color:   rgb(32,201,151);
 }
 
 .slideContainer
@@ -36,20 +46,40 @@ video
 }
 
 
-
-
 .float-container
 {
-	padding-top: 20px;
+	padding-top: 0px;
+	max-width: 700px;
 }
+
 
 .float-child
 {
-	width: 20%;
+	padding-right: 20px;
+	padding-top: 5px;
 	float: left;
 
 	margin: auto;
 	top: 50%;
 	-ms-transform: translateY(-50%);
 	transform: translateY(-50%);
+}
+
+
+.float-underOver
+{
+	display: block;
+	padding-top: 5px;
+}
+
+
+.float-leftCol
+{
+	width: 25%;
+}
+
+
+.float-midCol
+{
+	width: 15%;
 }

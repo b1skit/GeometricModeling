@@ -38,7 +38,6 @@ The following resources were consulted during the creation of this project:
 
 TODO:
 -----
-- Change decimation controls to percentages of edges
 - Display console output within web page
+- Display mesh status within web page (# verts, edges, etc)
 - Print warnings if subdivision/decimation will be slow...
- 
