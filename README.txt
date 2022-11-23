@@ -41,3 +41,5 @@ TODO:
 - Display console output within web page
 - Display mesh status within web page (# verts, edges, etc)
 - Print warnings if subdivision/decimation will be slow...
+
+© 2021 Adam Badke. All rights reserved.
